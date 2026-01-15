@@ -86,6 +86,7 @@ jobs:
   push:
     name: Push Images
     runs-on: ubuntu-latest
+    environment: prod
     needs: [build]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
