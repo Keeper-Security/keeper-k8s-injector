@@ -1,0 +1,6 @@
+# Artifact Hub repository metadata
+# https://artifacthub.io/docs/topics/repositories/
+repositoryID: d64343f9-be2e-45ab-a82d-3180c9b03dff
+owners:
+  - name: Keeper Security
+    email: pam@keepersecurity.com
