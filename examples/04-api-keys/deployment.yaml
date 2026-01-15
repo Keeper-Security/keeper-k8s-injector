@@ -1,0 +1,235 @@
+# API Keys Demo
+# Shows multiple API keys injected into custom paths.
+# Common pattern for SaaS integrations (Stripe, Slack, AWS, etc.)
+#
+# Usage:
+#   1. Create secrets in Keeper: stripe-api-key, slack-webhook, aws-credentials
+#   2. kubectl apply -f .
+#   3. kubectl port-forward svc/api-keys-demo 8080:80
+#   4. Open http://localhost:8080
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-keys-demo
+  labels:
+    app: api-keys-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-keys-demo
+  template:
+    metadata:
+      labels:
+        app: api-keys-demo
+      annotations:
+        # Enable Keeper injection
+        keeper.security/inject: "true"
+        # Reference to your KSM auth secret
+        keeper.security/auth-secret: "keeper-credentials"
+        # Inject multiple API keys to custom paths
+        keeper.security/secret-stripe: "stripe-api-key:/app/secrets/stripe.json"
+        keeper.security/secret-slack: "slack-webhook:/app/secrets/slack.json"
+        keeper.security/secret-aws: "aws-credentials:/app/secrets/aws.json"
+        # Refresh every 5 minutes
+        keeper.security/refresh-interval: "5m"
+    spec:
+      containers:
+      - name: app
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html
+          mountPath: /usr/share/nginx/html
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Function to check if a secret exists and extract info
+          check_secret() {
+            local file=$1
+            local name=$2
+
+            if [ -f "$file" ]; then
+              # Try to extract common fields
+              local api_key=$(cat "$file" | grep -o '"password":"[^"]*"' | cut -d'"' -f4 2>/dev/null || \
+                              cat "$file" | grep -o '"api_key":"[^"]*"' | cut -d'"' -f4 2>/dev/null || \
+                              cat "$file" | grep -o '"token":"[^"]*"' | cut -d'"' -f4 2>/dev/null)
+
+              if [ -n "$api_key" ]; then
+                # Mask the key (show first 4 and last 4 chars)
+                local masked="${api_key:0:4}...${api_key: -4}"
+                echo "<tr><td><strong>$name</strong></td><td><code>$masked</code></td><td style='color:#4CAF50'>✓ Loaded</td></tr>"
+              else
+                echo "<tr><td><strong>$name</strong></td><td><code>-</code></td><td style='color:#4CAF50'>✓ Present</td></tr>"
+              fi
+            else
+              echo "<tr><td><strong>$name</strong></td><td>-</td><td style='color:#f44336'>✗ Missing</td></tr>"
+            fi
+          }
+
+          update_page() {
+            TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+            # Check all secrets
+            STRIPE_ROW=$(check_secret "/app/secrets/stripe.json" "Stripe API Key")
+            SLACK_ROW=$(check_secret "/app/secrets/slack.json" "Slack Webhook")
+            AWS_ROW=$(check_secret "/app/secrets/aws.json" "AWS Credentials")
+
+            cat > /usr/share/nginx/html/index.html << 'HTMLEOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>API Keys Demo</title>
+            <meta http-equiv="refresh" content="10">
+            <style>
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                max-width: 900px;
+                margin: 50px auto;
+                padding: 20px;
+                background: #f5f5f5;
+              }
+              .card {
+                background: white;
+                border-radius: 12px;
+                padding: 30px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                margin-bottom: 20px;
+              }
+              h1 { color: #333; margin-top: 0; }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 20px 0;
+              }
+              th, td {
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #ddd;
+              }
+              th {
+                background: #f8f8f8;
+                font-weight: 600;
+              }
+              code {
+                background: #1a1a2e;
+                color: #00ff88;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-family: monospace;
+              }
+              .timestamp {
+                color: #666;
+                font-size: 14px;
+                margin-top: 20px;
+              }
+              .paths {
+                background: #f0f0f0;
+                padding: 15px;
+                border-radius: 8px;
+                margin: 20px 0;
+                font-family: monospace;
+                font-size: 13px;
+              }
+              .info {
+                background: #e3f2fd;
+                border-left: 4px solid #2196F3;
+                padding: 15px;
+                margin-top: 20px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <h1>🔑 API Keys Demo</h1>
+              <p>This demo shows multiple API keys injected from Keeper into custom paths.</p>
+
+              <table>
+                <thead>
+                  <tr>
+                    <th>Secret</th>
+                    <th>Value</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  STRIPE_PLACEHOLDER
+                  SLACK_PLACEHOLDER
+                  AWS_PLACEHOLDER
+                </tbody>
+              </table>
+
+              <div class="paths">
+                <strong>File Locations:</strong><br>
+                /app/secrets/stripe.json<br>
+                /app/secrets/slack.json<br>
+                /app/secrets/aws.json
+              </div>
+
+              <p class="timestamp">Last updated: TIMESTAMP_PLACEHOLDER</p>
+              <p class="timestamp">Page auto-refreshes every 10 seconds</p>
+            </div>
+
+            <div class="card info">
+              <h3>💡 About This Pattern</h3>
+              <p>This is a common pattern for SaaS integrations where you need multiple API keys from different services.</p>
+              <ul>
+                <li><strong>Each secret</strong> is stored as a separate record in Keeper</li>
+                <li><strong>Custom paths</strong> keep secrets organized by service</li>
+                <li><strong>All secrets rotate</strong> independently on the same schedule</li>
+              </ul>
+            </div>
+
+            <div class="card">
+              <h3>🔧 Setup Instructions</h3>
+              <p>In your Keeper vault, create these records:</p>
+              <ol>
+                <li><strong>stripe-api-key</strong> - Add your Stripe API key in the password field</li>
+                <li><strong>slack-webhook</strong> - Add your Slack webhook URL in the password field</li>
+                <li><strong>aws-credentials</strong> - Add AWS access key and secret</li>
+              </ol>
+            </div>
+          </body>
+          </html>
+          HTMLEOF
+
+            # Replace placeholders
+            sed -i "s|STRIPE_PLACEHOLDER|$STRIPE_ROW|g" /usr/share/nginx/html/index.html
+            sed -i "s|SLACK_PLACEHOLDER|$SLACK_ROW|g" /usr/share/nginx/html/index.html
+            sed -i "s|AWS_PLACEHOLDER|$AWS_ROW|g" /usr/share/nginx/html/index.html
+            sed -i "s|TIMESTAMP_PLACEHOLDER|$TIMESTAMP|g" /usr/share/nginx/html/index.html
+          }
+
+          # Initial page generation
+          update_page
+
+          # Background job to refresh the page
+          while true; do
+            sleep 10
+            update_page
+          done &
+
+          # Start nginx
+          nginx -g 'daemon off;'
+      volumes:
+      - name: html
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-keys-demo
+  labels:
+    app: api-keys-demo
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  selector:
+    app: api-keys-demo
