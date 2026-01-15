@@ -16,8 +16,6 @@ jobs:
     permissions:
       contents: write
       packages: write
-      pages: write
-      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -85,6 +83,10 @@ jobs:
         run: |
           helm package charts/keeper-injector -d .helm-packages
 
+      - name: Push Helm chart to Docker Hub OCI
+        run: |
+          helm push .helm-packages/keeper-injector-${{ steps.version.outputs.VERSION }}.tgz oci://registry-1.docker.io/keeper
+
       - name: Generate install manifest
         run: |
           helm template keeper-injector charts/keeper-injector \
@@ -102,33 +104,3 @@ jobs:
             deploy/install.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Publish Helm chart to GitHub Pages
-      - name: Checkout gh-pages branch
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          path: gh-pages
-        continue-on-error: true
-
-      - name: Initialize gh-pages if needed
-        run: |
-          if [ ! -d "gh-pages" ]; then
-            mkdir gh-pages
-            cd gh-pages
-            git init
-            git checkout -b gh-pages
-          fi
-
-      - name: Update Helm repo index
-        run: |
-          cp .helm-packages/*.tgz gh-pages/
-          cd gh-pages
-          helm repo index . --url https://keeper-security.github.io/keeper-k8s-injector --merge index.yaml 2>/dev/null || helm repo index . --url https://keeper-security.github.io/keeper-k8s-injector
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./gh-pages
-          keep_files: true
