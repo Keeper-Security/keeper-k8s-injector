@@ -1,0 +1,146 @@
+# Hello Secrets - Keeper K8s Injector Demo
+#
+# This deploys a simple web page that displays your secret value.
+# Change the secret in Keeper and watch it update automatically!
+#
+# Usage:
+#   1. Update KEEPER_SECRET_TITLE below with your secret's title
+#   2. kubectl apply -f .
+#   3. kubectl port-forward svc/hello-secrets 8080:80
+#   4. Open http://localhost:8080
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-secrets
+  labels:
+    app: hello-secrets
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-secrets
+  template:
+    metadata:
+      labels:
+        app: hello-secrets
+      annotations:
+        # Enable Keeper injection
+        keeper.security/inject: "true"
+        # Reference to your KSM auth secret (create this first!)
+        keeper.security/auth-secret: "keeper-credentials"
+        # The title of your secret in Keeper (change this!)
+        keeper.security/secret: "demo-secret"
+        # Refresh every 30 seconds to see rotation in action
+        keeper.security/refresh-interval: "30s"
+    spec:
+      containers:
+      - name: web
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html
+          mountPath: /usr/share/nginx/html
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Generate HTML page that shows the secret
+          update_page() {
+            SECRET_VALUE=$(cat /keeper/secrets/demo-secret.json 2>/dev/null | head -c 500 || echo '{"error": "Secret not loaded yet"}')
+            SECRET_PREVIEW=$(echo "$SECRET_VALUE" | head -c 100)
+            TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+            cat > /usr/share/nginx/html/index.html << 'HTMLEOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Keeper Secrets Demo</title>
+            <meta http-equiv="refresh" content="5">
+            <style>
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                max-width: 800px;
+                margin: 50px auto;
+                padding: 20px;
+                background: #f5f5f5;
+              }
+              .card {
+                background: white;
+                border-radius: 12px;
+                padding: 30px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                margin-bottom: 20px;
+              }
+              h1 { color: #333; margin-top: 0; }
+              .secret-box {
+                background: #1a1a2e;
+                color: #00ff88;
+                padding: 20px;
+                border-radius: 8px;
+                font-family: monospace;
+                font-size: 14px;
+                overflow-x: auto;
+                white-space: pre-wrap;
+                word-break: break-all;
+              }
+              .timestamp {
+                color: #666;
+                font-size: 14px;
+                margin-top: 15px;
+              }
+              .instructions {
+                background: #e8f4e8;
+                border-left: 4px solid #4CAF50;
+                padding: 15px;
+                margin-top: 20px;
+              }
+              .logo { font-size: 24px; margin-bottom: 10px; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <div class="logo">🔐 Keeper Secrets Manager</div>
+              <h1>Hello Secrets!</h1>
+              <p>This page displays a secret injected from Keeper Secrets Manager.</p>
+
+              <h3>Secret Value:</h3>
+              <div class="secret-box">SECRETPLACEHOLDER</div>
+
+              <p class="timestamp">Last updated: TIMESTAMPPLACEHOLDER</p>
+              <p class="timestamp">Page auto-refreshes every 5 seconds</p>
+            </div>
+
+            <div class="card instructions">
+              <h3>🔄 Try Secret Rotation!</h3>
+              <ol>
+                <li>Go to Keeper and modify your secret</li>
+                <li>Wait ~30 seconds (the refresh interval)</li>
+                <li>Watch this page update automatically!</li>
+              </ol>
+              <p><strong>No pod restart required</strong> - the sidecar handles rotation.</p>
+            </div>
+          </body>
+          </html>
+          HTMLEOF
+
+            # Replace placeholders
+            sed -i "s|SECRETPLACEHOLDER|$SECRET_VALUE|g" /usr/share/nginx/html/index.html
+            sed -i "s|TIMESTAMPPLACEHOLDER|$TIMESTAMP|g" /usr/share/nginx/html/index.html
+          }
+
+          # Initial page generation
+          update_page
+
+          # Background job to refresh the page every 5 seconds
+          while true; do
+            sleep 5
+            update_page
+          done &
+
+          # Start nginx
+          nginx -g 'daemon off;'
+      volumes:
+      - name: html
+        emptyDir: {}

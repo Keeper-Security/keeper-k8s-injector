@@ -75,6 +75,30 @@ spec:
 
 That's it! Your secrets are now available at `/keeper/secrets/database-credentials.json`.
 
+## Examples
+
+Try these working examples to see the injector in action:
+
+| Example | Description | Time |
+|---------|-------------|------|
+| [Hello Secrets](examples/01-hello-secrets/) | Web page displaying secret values | 5 min |
+| [PostgreSQL](examples/02-database-postgres/) | Real database credential injection | 10 min |
+| [Rotation Dashboard](examples/06-rotation-dashboard/) | Live secret rotation visualization | 5 min |
+
+### Try It Now
+
+```bash
+# Clone the repo
+git clone https://github.com/Keeper-Security/keeper-k8s-injector.git
+cd keeper-k8s-injector
+
+# Run the hello-secrets example
+kubectl apply -f examples/01-hello-secrets/
+kubectl port-forward svc/hello-secrets 8080:80
+
+# Open http://localhost:8080 and watch secrets update!
+```
+
 ## Documentation
 
 - [Overview](docs/overview.md) - Architecture and concepts
