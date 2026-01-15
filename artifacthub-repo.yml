@@ -1,0 +1,6 @@
+# ArtifactHub repository metadata
+# https://artifacthub.io/docs/topics/repositories/
+repositoryID: # Will be assigned by ArtifactHub
+owners:
+  - name: Keeper Security
+    email: ops@keepersecurity.com
