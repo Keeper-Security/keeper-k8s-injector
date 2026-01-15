@@ -1,3 +1,24 @@
+# Release Workflow for keeper-k8s-injector
+#
+# WHAT THIS DOES:
+#   1. Builds and pushes Docker images to Docker Hub
+#   2. Packages and pushes Helm chart to Docker Hub OCI registry
+#   3. Updates GitHub Pages Helm repository (gh-pages branch)
+#   4. Creates GitHub Release with downloadable artifacts
+#
+# HOW TO TRIGGER:
+#   git tag vX.Y.Z && git push origin vX.Y.Z
+#
+# PUBLISHED ARTIFACTS:
+#   - Docker: keeper/injector-webhook:X.Y.Z, keeper/injector-sidecar:X.Y.Z
+#   - Helm OCI: oci://registry-1.docker.io/keeper/keeper-injector
+#   - Helm HTTP: https://keeper-security.github.io/keeper-k8s-injector
+#   - GitHub Release: .tgz chart + install.yaml manifest
+#
+# REQUIRED SECRETS (in 'prod' environment):
+#   - DOCKERHUB_USERNAME
+#   - DOCKERHUB_TOKEN
+
 name: Release
 
 on:
@@ -12,11 +33,14 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    environment: prod
+    environment: prod  # Required to access DOCKERHUB_* secrets
     permissions:
       contents: write
       packages: write
     steps:
+      # ========================================
+      # SETUP
+      # ========================================
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -39,11 +63,16 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract version
+      - name: Extract version from tag
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      - name: Build and push webhook
+      # ========================================
+      # BUILD AND PUSH DOCKER IMAGES
+      # Images: keeper/injector-webhook, keeper/injector-sidecar
+      # Platforms: linux/amd64, linux/arm64
+      # ========================================
+      - name: Build and push webhook image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -56,7 +85,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push sidecar
+      - name: Build and push sidecar image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -69,6 +98,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # ========================================
+      # PACKAGE AND PUSH HELM CHART
+      # OCI: oci://registry-1.docker.io/keeper/keeper-injector
+      # ========================================
       - name: Install Helm
         uses: azure/setup-helm@v4
         with:
@@ -91,6 +124,10 @@ jobs:
         run: |
           helm push .helm-packages/keeper-injector-${{ steps.version.outputs.VERSION }}.tgz oci://registry-1.docker.io/keeper
 
+      # ========================================
+      # GENERATE KUBECTL INSTALL MANIFEST
+      # For users who prefer: kubectl apply -f install.yaml
+      # ========================================
       - name: Generate install manifest
         run: |
           helm template keeper-injector charts/keeper-injector \
@@ -99,6 +136,10 @@ jobs:
             --set sidecar.tag=${{ steps.version.outputs.VERSION }} \
             > deploy/install.yaml
 
+      # ========================================
+      # CREATE GITHUB RELEASE
+      # Includes: Helm .tgz chart, install.yaml manifest
+      # ========================================
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -108,3 +149,29 @@ jobs:
             deploy/install.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ========================================
+      # UPDATE GITHUB PAGES HELM REPOSITORY
+      # URL: https://keeper-security.github.io/keeper-k8s-injector
+      # This enables: helm repo add keeper https://keeper-security.github.io/keeper-k8s-injector
+      # ========================================
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Update Helm repository index
+        run: |
+          cp .helm-packages/keeper-injector-${{ steps.version.outputs.VERSION }}.tgz gh-pages/
+          cd gh-pages
+          helm repo index . --url https://keeper-security.github.io/keeper-k8s-injector --merge index.yaml
+
+      - name: Push to gh-pages
+        run: |
+          cd gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Add keeper-injector-${{ steps.version.outputs.VERSION }}"
+          git push
