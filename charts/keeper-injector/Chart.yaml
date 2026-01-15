@@ -6,7 +6,7 @@ version: 0.1.0
 appVersion: "0.1.0"
 kubeVersion: ">=1.25.0-0"
 home: https://www.keepersecurity.com
-icon: https://avatars.githubusercontent.com/u/98108730?v=4
+icon: https://keepersecurity.com/vault/images/keeper_icons/icon_rounded_256.png
 sources:
   - https://github.com/keeper-security/keeper-k8s-injector
 maintainers:
