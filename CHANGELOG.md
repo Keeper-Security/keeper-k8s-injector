@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-01-15
+
+### Added
+
+- Complete example applications suite:
+  - 01-hello-secrets: Simple web page demo (5 min)
+  - 02-database-postgres: PostgreSQL credentials injection
+  - 03-database-mysql: MySQL credentials injection
+  - 04-api-keys: Multiple SaaS API keys pattern
+  - 05-tls-nginx: NGINX with TLS certificates from Keeper
+  - 06-rotation-dashboard: Live secret rotation visualization
+- Helm chart README for ArtifactHub display
+- Docker Hub READMEs for all three images
+- Updated documentation with all installation methods
+
+### Fixed
+
+- Linter issues: unchecked Write() errors and simplified string operations
+- Updated CLAUDE.md with Docker development rules
+
 ## [0.1.2] - 2026-01-15
 
 ### Changed
