@@ -16,3 +16,9 @@ This is the Keeper Kubernetes Secrets Injector - a mutating admission webhook th
 - Kubernetes 1.25+
 - controller-runtime for webhook framework
 - Keeper Secrets Manager Go SDK
+
+## Development Rules
+
+- **ALWAYS** run code, tests, and linting in Docker containers
+- **NEVER** run Go commands or linters directly on the host
+- Use `docker run` or the dev Dockerfile for all development tasks

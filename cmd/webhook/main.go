@@ -85,7 +85,9 @@ func main() {
 
 	// Create and register mutating webhook
 	mutator := webhook.NewPodMutator(mgr.GetClient(), logger, webhookCfg)
-	mutator.InjectDecoder(decoder)
+	if err := mutator.InjectDecoder(decoder); err != nil {
+		logger.Fatal("failed to inject decoder", zap.Error(err))
+	}
 	mgr.GetWebhookServer().Register("/mutate-pods", &ctrlwebhook.Admission{Handler: mutator})
 
 	// Add health checks

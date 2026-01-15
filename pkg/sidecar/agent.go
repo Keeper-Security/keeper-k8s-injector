@@ -468,20 +468,20 @@ func (a *Agent) startHealthServer() {
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		if a.healthy {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("ok"))
+			_, _ = w.Write([]byte("ok"))
 		} else {
 			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte("unhealthy"))
+			_, _ = w.Write([]byte("unhealthy"))
 		}
 	})
 
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		if a.ready {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("ok"))
+			_, _ = w.Write([]byte("ok"))
 		} else {
 			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte("not ready"))
+			_, _ = w.Write([]byte("not ready"))
 		}
 	})
 

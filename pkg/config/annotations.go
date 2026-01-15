@@ -349,9 +349,7 @@ func parseKeeperNotation(name, value string) SecretRef {
 // extractRecordFromNotation extracts the record UID or title from notation
 func extractRecordFromNotation(notation string) string {
 	// Remove keeper:// prefix if present
-	if strings.HasPrefix(notation, KeeperNotationPrefix) {
-		notation = notation[len(KeeperNotationPrefix):]
-	}
+	notation = strings.TrimPrefix(notation, KeeperNotationPrefix)
 
 	// Find first "/" which separates record from selector
 	slashIdx := strings.Index(notation, "/")
