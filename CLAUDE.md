@@ -22,3 +22,12 @@ This is the Keeper Kubernetes Secrets Injector - a mutating admission webhook th
 - **ALWAYS** run code, tests, and linting in Docker containers
 - **NEVER** run Go commands or linters directly on the host
 - Use `docker run` or the dev Dockerfile for all development tasks
+
+## Documentation Style
+
+- Use professional, matter-of-fact language
+- Avoid marketing terms like "killer feature", "magic", "awesome"
+- Avoid excessive exclamation marks in technical explanations
+- Avoid phrases like "secure!", "powerful!", "amazing!"
+- Use clear, technical descriptions instead of enthusiasm
+- Emojis are acceptable in user-facing demo UIs, but minimize in READMEs
