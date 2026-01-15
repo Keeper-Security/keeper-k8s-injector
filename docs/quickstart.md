@@ -87,7 +87,7 @@ kubectl apply -f my-pod.yaml
 kubectl exec my-app -- cat /keeper/secrets/my-database-credentials.json
 ```
 
-## That's It!
+## Summary
 
 Your secrets are now:
 - Fetched from Keeper Secrets Manager

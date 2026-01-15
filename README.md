@@ -73,7 +73,7 @@ spec:
       image: my-app:latest
 ```
 
-That's it! Your secrets are now available at `/keeper/secrets/database-credentials.json`.
+Secrets are now available at `/keeper/secrets/database-credentials.json`.
 
 ## Examples
 
@@ -96,7 +96,7 @@ cd keeper-k8s-injector
 kubectl apply -f examples/01-hello-secrets/
 kubectl port-forward svc/hello-secrets 8080:80
 
-# Open http://localhost:8080 and watch secrets update!
+# Open http://localhost:8080
 ```
 
 ## Documentation

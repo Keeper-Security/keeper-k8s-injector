@@ -110,7 +110,7 @@ NGINX reads these files to serve HTTPS traffic.
 
 ## Try Certificate Rotation
 
-This is the powerful part - rotate certificates without downtime:
+Rotating certificates without downtime:
 
 ### Step 1: Generate New Certificates
 

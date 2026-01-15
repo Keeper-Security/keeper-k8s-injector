@@ -7,7 +7,7 @@ The simplest possible demo of Keeper K8s Injector. A web page that displays your
 ## What This Demonstrates
 
 - Basic secret injection using annotations
-- Automatic secret rotation (no pod restart!)
+- Automatic secret rotation without pod restarts
 - Visual confirmation that secrets are loaded
 
 ## Prerequisites
@@ -52,7 +52,7 @@ kubectl port-forward svc/hello-secrets 8080:80
 
 Open http://localhost:8080 in your browser.
 
-You should see your secret displayed on the page!
+You should see your secret displayed on the page.
 
 ## Try Secret Rotation
 

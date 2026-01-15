@@ -138,7 +138,7 @@ session = boto3.Session(
 1. Go to Keeper and modify one of the API keys
 2. Wait ~5 minutes (the configured refresh interval)
 3. Refresh the demo page - you'll see the masked value update
-4. **Your app can re-read the file to get the new value** - no restart needed!
+4. Your app can re-read the file to get the new value without restart.
 
 ## Production Considerations
 

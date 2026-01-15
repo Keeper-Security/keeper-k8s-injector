@@ -1,6 +1,6 @@
 # Secret Rotation Dashboard
 
-A live dashboard demonstrating Keeper's **automatic secret rotation** - the killer feature that sets us apart from competitors.
+A live dashboard demonstrating automatic secret rotation without pod restarts.
 
 **Time to complete: ~5 minutes**
 
@@ -148,7 +148,7 @@ You can adjust the refresh interval:
 
 ### How fast can rotation be?
 
-As fast as you want! Set `keeper.security/refresh-interval: "5s"` for near-instant updates. Consider API rate limits for very short intervals.
+Configurable to any interval. Set `keeper.security/refresh-interval: "5s"` for near-instant updates. Consider API rate limits for very short intervals.
 
 ### Does this work with all secret types?
 
