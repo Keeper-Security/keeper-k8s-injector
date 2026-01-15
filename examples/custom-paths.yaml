@@ -1,0 +1,26 @@
+# Pod with Custom Secret Paths
+# When you need secrets in specific locations
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-app-custom-paths
+  annotations:
+    keeper.security/inject: "true"
+    keeper.security/auth-secret: "keeper-auth"
+    # Custom paths using keeper.security/secret-{name} format
+    keeper.security/secret-database: "/app/config/database.json"
+    keeper.security/secret-api: "/app/config/api-keys.json"
+    keeper.security/secret-tls: "/etc/ssl/app/cert.json"
+spec:
+  containers:
+    - name: app
+      image: alpine:latest
+      command:
+        - sh
+        - -c
+        - |
+          echo "Secrets written to custom paths:"
+          ls -la /app/config/
+          ls -la /etc/ssl/app/
+          cat /app/config/database.json
+          sleep infinity

@@ -1,0 +1,19 @@
+# Simple Pod with Keeper Secret Injection
+# This is the simplest possible example - two annotations, one secret
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-app
+  annotations:
+    # Enable injection
+    keeper.security/inject: "true"
+    # Specify the auth secret containing KSM credentials
+    keeper.security/auth-secret: "keeper-auth"
+    # Specify the secret to inject (by title)
+    keeper.security/secret: "database-credentials"
+spec:
+  containers:
+    - name: app
+      image: alpine:latest
+      command: ["sh", "-c", "cat /keeper/secrets/database-credentials.json && sleep infinity"]
+      # The secrets volume is automatically mounted at /keeper/secrets/
