@@ -121,6 +121,7 @@ jobs:
           helm package charts/keeper-injector -d .helm-packages
 
       - name: Push Helm chart to Docker Hub OCI
+        continue-on-error: true  # OCI push is optional; GitHub Pages is the primary distribution
         run: |
           helm push .helm-packages/keeper-injector-${{ steps.version.outputs.VERSION }}.tgz oci://registry-1.docker.io/keeper
 
