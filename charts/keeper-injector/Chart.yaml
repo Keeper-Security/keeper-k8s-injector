@@ -11,7 +11,7 @@ sources:
   - https://github.com/keeper-security/keeper-k8s-injector
 maintainers:
   - name: Keeper Security
-    email: support@keepersecurity.com
+    email: pam@keepersecurity.com
     url: https://www.keepersecurity.com
 keywords:
   - keeper
