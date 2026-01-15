@@ -56,11 +56,9 @@ You should see your secret displayed on the page!
 
 ## Try Secret Rotation
 
-This is the magic part:
-
-1. Go to Keeper and **modify your secret** (change the password, add a field, etc.)
+1. Go to Keeper and modify your secret (change the password, add a field, etc.)
 2. Wait ~30 seconds (the configured refresh interval)
-3. **Watch the page update automatically!**
+3. Refresh the page to see the updated value
 
 The pod never restarts. The sidecar container fetches the new value and writes it to the shared volume.
 
@@ -80,7 +78,7 @@ The pod never restarts. The sidecar container fetches the new value and writes i
 │         ▲                          │                │
 │         └──────────────────────────┘                │
 │                  tmpfs volume                       │
-│              (memory only - secure!)                │
+│              (memory-backed tmpfs)                  │
 └─────────────────────────────────────────────────────┘
 ```
 

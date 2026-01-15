@@ -127,7 +127,7 @@ Try these working examples:
 │         ▲                          │                │
 │         └──────────────────────────┘                │
 │                  tmpfs volume                       │
-│              (memory only - secure!)                │
+│              (memory-backed tmpfs)                  │
 └─────────────────────────────────────────────────────┘
 ```
 

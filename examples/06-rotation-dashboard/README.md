@@ -73,7 +73,7 @@ Once the dashboard is open:
    - The timestamp update
    - The old value added to history
 
-**No pod restart. No redeployment. Just magic.** ✨
+The pod continues running without restart or redeployment.
 
 ## Screenshot
 

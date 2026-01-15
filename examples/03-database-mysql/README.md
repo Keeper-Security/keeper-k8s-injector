@@ -74,11 +74,11 @@ You should see:
 kubectl exec -it deploy/mysql -- mysql -u root -pinitial-password-change-me -e "ALTER USER 'demouser'@'%' IDENTIFIED BY 'super-secret-2024';"
 ```
 
-### Step 3: Watch the magic
+### Step 3: Verify the rotation
 
 - The client app will pick up the new password within 60 seconds
 - Connection will briefly fail, then succeed with new credentials
-- **No pod restart required!**
+- No pod restart required
 
 ## Keeper Record Format
 

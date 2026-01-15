@@ -85,11 +85,11 @@ This is where it gets interesting:
 kubectl exec -it deploy/postgres -- psql -U demouser -d demodb -c "ALTER USER demouser PASSWORD 'super-secret-2024';"
 ```
 
-### Step 3: Watch the magic
+### Step 3: Verify the rotation
 
 - The client app will pick up the new password within 60 seconds
 - Connection will briefly fail, then succeed with new credentials
-- **No pod restart required!**
+- No pod restart required
 
 ## Architecture
 

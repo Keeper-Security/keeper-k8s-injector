@@ -7,7 +7,7 @@
 #   1. kubectl apply -f .
 #   2. kubectl port-forward svc/rotation-dashboard 8080:80
 #   3. Open http://localhost:8080
-#   4. Change your secret in Keeper and watch the magic!
+#   4. Change your secret in Keeper and observe the rotation
 
 apiVersion: apps/v1
 kind: Deployment
@@ -246,14 +246,14 @@ spec:
               </div>
 
               <div class="card instructions">
-                <h2>🎯 Try It Now!</h2>
+                <h2>Testing Rotation</h2>
                 <ol>
                   <li>Open Keeper and find your <strong>"rotation-demo"</strong> record</li>
                   <li>Change the password field to something new</li>
                   <li>Save the record</li>
-                  <li>Watch this dashboard update within 15 seconds!</li>
+                  <li>Observe the dashboard update within 15 seconds</li>
                 </ol>
-                <p><strong>✨ No pod restart needed!</strong> The sidecar handles everything.</p>
+                <p><strong>Note:</strong> No pod restart needed. The sidecar handles rotation automatically.</p>
               </div>
             </div>
           </body>

@@ -128,13 +128,13 @@ openssl req -x509 -newkey rsa:4096 -nodes \
 4. Upload the new `server-new.key` as `server.key`
 5. Save the record
 
-### Step 3: Watch the Magic
+### Step 3: Verify the rotation
 
 - Wait ~12 hours (or force refresh by restarting the pod)
 - The sidecar detects the change
 - New certificate files are written
 - NGINX picks up the new certificates
-- **No downtime, no pod restart!**
+- No downtime or pod restart required
 
 ## Production Considerations
 
