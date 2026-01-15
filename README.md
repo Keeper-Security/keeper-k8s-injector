@@ -3,6 +3,7 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-1.25+-blue.svg)](https://kubernetes.io/)
 [![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8.svg)](https://go.dev/)
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/keeper-injector)](https://artifacthub.io/packages/helm/keeper-injector/keeper-injector)
 
 Automatically inject secrets from [Keeper Secrets Manager](https://www.keepersecurity.com/secrets-manager.html) into your Kubernetes pods at runtime.
 
@@ -18,21 +19,44 @@ Automatically inject secrets from [Keeper Secrets Manager](https://www.keepersec
 - **Folder Support** - Fetch all secrets from a Keeper folder
 - **Production-ready** - HA, metrics, leader election
 
+## Installation
+
+### Option 1: Helm (OCI Registry) - Recommended
+
+```bash
+helm install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
+  --namespace keeper-system \
+  --create-namespace
+```
+
+### Option 2: Helm (Repository)
+
+```bash
+helm repo add keeper https://keeper-security.github.io/keeper-k8s-injector
+helm repo update
+helm install keeper-injector keeper/keeper-injector \
+  --namespace keeper-system \
+  --create-namespace
+```
+
+### Option 3: kubectl (Direct YAML)
+
+```bash
+kubectl apply -f https://github.com/Keeper-Security/keeper-k8s-injector/releases/latest/download/install.yaml
+```
+
 ## Quick Start
 
-### Install
+### 1. Create KSM Auth Secret
 
 ```bash
-kubectl apply -f https://keeper.security/k8s/injector.yaml
+# From your Keeper Secrets Manager config file
+kubectl create secret generic keeper-auth \
+  --from-file=config=ksm-config.json \
+  --namespace default
 ```
 
-### Configure Auth
-
-```bash
-kubectl create secret generic keeper-auth --from-file=config=ksm-config.json
-```
-
-### Annotate Your Pod
+### 2. Annotate Your Pod
 
 ```yaml
 apiVersion: v1
@@ -93,24 +117,45 @@ keeper.security/secret-password: "keeper://QabbPIdM8Unw4hwVM-F8VQ/field/password
 keeper.security/file-cert: "Database Credentials:cert.pem:/app/certs/server.pem"
 ```
 
-## Comparison with ESO
+## Comparison with External Secrets Operator (ESO)
 
 | Feature | Keeper Injector | External Secrets Operator |
 |---------|-----------------|---------------------------|
 | Creates K8s Secrets | No | Yes |
-| Secret storage | Pod tmpfs | etcd |
+| Secret storage | Pod tmpfs (memory) | etcd |
+| Secrets in etcd backups | No | Yes |
 | Configuration | Annotations | CRDs |
 | Runtime rotation | Yes (sidecar) | Sync interval |
+| Pod isolation | Yes | Shared secrets |
+
+**Use Keeper Injector when:** Security is paramount, you need secrets out of etcd, or require per-pod isolation.
+
+**Use ESO when:** You need secrets as K8s Secret objects, or apps require environment variables only.
+
+## Docker Images
+
+| Image | Description |
+|-------|-------------|
+| `keeper/injector-webhook` | Mutating admission webhook |
+| `keeper/injector-sidecar` | Sidecar container for secret fetching |
+
+Images are available on [Docker Hub](https://hub.docker.com/u/keeper) with multi-arch support (amd64, arm64).
 
 ## Requirements
 
 - Kubernetes 1.25+
-- cert-manager (for TLS)
 - Keeper Secrets Manager application
+
+## Links
+
+- [ArtifactHub](https://artifacthub.io/packages/helm/keeper-injector/keeper-injector)
+- [Docker Hub - Webhook](https://hub.docker.com/r/keeper/injector-webhook)
+- [Docker Hub - Sidecar](https://hub.docker.com/r/keeper/injector-sidecar)
+- [Keeper Secrets Manager](https://docs.keeper.io/secrets-manager/)
 
 ## Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md).
+Contributions are welcome! Please open an issue or pull request.
 
 ## License
 
@@ -118,6 +163,5 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Support
 
-- [Documentation](https://docs.keeper.io/k8s)
-- [GitHub Issues](https://github.com/keeper-security/keeper-k8s-injector/issues)
+- [GitHub Issues](https://github.com/Keeper-Security/keeper-k8s-injector/issues)
 - [Keeper Support](https://www.keepersecurity.com/support.html)
