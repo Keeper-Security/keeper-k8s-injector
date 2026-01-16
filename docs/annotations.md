@@ -117,6 +117,27 @@ Templates support 100+ functions from [Sprig](http://masterminds.github.io/sprig
 | `keeper.security/auth-secret` | Required | K8s secret name with KSM config |
 | `keeper.security/auth-method` | `"secret"` | Auth method: `"secret"` or `"oidc"` |
 
+## CA Certificate Annotations (Corporate Proxies)
+
+For environments with SSL inspection (Zscaler, Palo Alto, Cisco Umbrella, etc.):
+
+| Annotation | Description | Example |
+|------------|-------------|---------|
+| `keeper.security/ca-cert-secret` | K8s Secret with custom CA certificate | `"corporate-ca"` |
+| `keeper.security/ca-cert-configmap` | K8s ConfigMap with custom CA certificate | `"zscaler-ca"` |
+| `keeper.security/ca-cert-key` | Key in Secret/ConfigMap | `"ca.crt"` (default) |
+
+**Example:**
+```yaml
+annotations:
+  keeper.security/inject: "true"
+  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/secret: "my-secret"
+  keeper.security/ca-cert-configmap: "corporate-ca"  # For SSL inspection
+```
+
+This loads the custom CA certificate and adds it to the system trust store, allowing the sidecar to connect through corporate proxies.
+
 ## Output Formats
 
 When using Level 5+ configuration, you can specify output format:

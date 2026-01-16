@@ -33,6 +33,11 @@ const (
 	AnnotationSignal          = AnnotationPrefix + "signal"
 	AnnotationStrictLookup    = AnnotationPrefix + "strict-lookup"
 
+	// CA Certificate annotations (for corporate proxies/SSL inspection)
+	AnnotationCACertSecret    = AnnotationPrefix + "ca-cert-secret"     // K8s Secret name with CA cert
+	AnnotationCACertConfigMap = AnnotationPrefix + "ca-cert-configmap"  // K8s ConfigMap name with CA cert
+	AnnotationCACertKey       = AnnotationPrefix + "ca-cert-key"        // Key in Secret/ConfigMap (default: "ca.crt")
+
 	// Default values
 	DefaultSecretsPath     = "/keeper/secrets"
 	DefaultRefreshInterval = "5m"
@@ -97,6 +102,12 @@ type InjectionConfig struct {
 	FailOnError bool
 	// Signal to send to app container on secret refresh (e.g., "SIGHUP")
 	Signal string
+	// CACertSecret is the name of the K8s Secret containing custom CA certificate
+	CACertSecret string
+	// CACertConfigMap is the name of the K8s ConfigMap containing custom CA certificate
+	CACertConfigMap string
+	// CACertKey is the key in the Secret/ConfigMap (default: "ca.crt")
+	CACertKey string
 	// StrictLookup if true, fail on duplicate title matches
 	StrictLookup bool
 }
@@ -146,6 +157,19 @@ func ParseAnnotations(pod *corev1.Pod) (*InjectionConfig, error) {
 	}
 	if strictLookup, ok := annotations[AnnotationStrictLookup]; ok {
 		config.StrictLookup = strings.ToLower(strictLookup) == "true"
+	}
+
+	// Parse CA certificate configuration
+	if caCertSecret, ok := annotations[AnnotationCACertSecret]; ok {
+		config.CACertSecret = caCertSecret
+	}
+	if caCertConfigMap, ok := annotations[AnnotationCACertConfigMap]; ok {
+		config.CACertConfigMap = caCertConfigMap
+	}
+	if caCertKey, ok := annotations[AnnotationCACertKey]; ok {
+		config.CACertKey = caCertKey
+	} else {
+		config.CACertKey = "ca.crt" // Default key
 	}
 
 	// Parse secrets - Level 1: Single secret

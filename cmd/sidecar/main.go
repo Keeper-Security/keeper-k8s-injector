@@ -3,8 +3,11 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"flag"
+	"net/http"
 	"os"
 	"time"
 
@@ -59,6 +62,11 @@ func main() {
 	logger.Info("starting Keeper sidecar agent",
 		zap.String("mode", mode),
 		zap.Duration("refreshInterval", refreshInterval))
+
+	// Load custom CA certificate if present (for corporate proxies)
+	if err := loadCustomCACert(logger); err != nil {
+		logger.Warn("failed to load custom CA certificate", zap.Error(err))
+	}
 
 	// Parse configuration from environment
 	configJSON := os.Getenv("KEEPER_CONFIG")
@@ -131,6 +139,47 @@ func main() {
 	}
 
 	logger.Info("agent completed successfully")
+}
+
+// loadCustomCACert loads custom CA certificate for corporate proxies/SSL inspection.
+// Supports environments like Zscaler, Palo Alto, Cisco Umbrella, etc.
+func loadCustomCACert(logger *zap.Logger) error {
+	const caCertPath = "/usr/local/share/ca-certificates/keeper-ca.crt"
+
+	// Check if custom CA cert exists
+	certPEM, err := os.ReadFile(caCertPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// No custom CA cert configured - this is normal
+			return nil
+		}
+		return err
+	}
+
+	logger.Info("loading custom CA certificate", zap.String("path", caCertPath))
+
+	// Get system cert pool
+	rootCAs, err := x509.SystemCertPool()
+	if err != nil {
+		// If system pool fails, create new pool
+		rootCAs = x509.NewCertPool()
+	}
+
+	// Append custom CA cert
+	if !rootCAs.AppendCertsFromPEM(certPEM) {
+		return err
+	}
+
+	// Configure default HTTP transport with custom cert pool
+	http.DefaultTransport = &http.Transport{
+		TLSClientConfig: &tls.Config{
+			RootCAs:    rootCAs,
+			MinVersion: tls.VersionTLS12,
+		},
+	}
+
+	logger.Info("custom CA certificate loaded successfully")
+	return nil
 }
 
 func setupLogger(level, format string) *zap.Logger {

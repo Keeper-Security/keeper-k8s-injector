@@ -112,10 +112,11 @@ kubectl port-forward svc/hello-secrets 8080:80
 
 ## Documentation
 
-- [Overview](docs/overview.md) - Architecture and concepts
 - [Quick Start](docs/quickstart.md) - 5-minute setup guide
+- [Complete Feature Reference](docs/features.md) - All features with examples
 - [Annotations Reference](docs/annotations.md) - All configuration options
-- [Advanced Configuration](docs/advanced.md) - Helm, OIDC, multi-cluster
+- [Template Guide](docs/templates.md) - Go templates and functions
+- [Feature Comparison](docs/comparison.md) - vs Vault, ESO, AWS CSI, 1Password
 - [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
 
 ## Annotation Examples

@@ -156,6 +156,41 @@ func (m *PodMutator) mutatePod(ctx context.Context, pod *corev1.Pod, cfg *config
 	}
 	pod.Spec.Volumes = append(pod.Spec.Volumes, secretsVolume)
 
+	// Add CA certificate volume if specified (for corporate proxies)
+	if cfg.CACertSecret != "" || cfg.CACertConfigMap != "" {
+		caCertVolume := corev1.Volume{
+			Name: "keeper-ca-cert",
+		}
+		if cfg.CACertSecret != "" {
+			caCertVolume.VolumeSource = corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: cfg.CACertSecret,
+					Items: []corev1.KeyToPath{
+						{
+							Key:  cfg.CACertKey,
+							Path: "ca.crt",
+						},
+					},
+				},
+			}
+		} else {
+			caCertVolume.VolumeSource = corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: cfg.CACertConfigMap,
+					},
+					Items: []corev1.KeyToPath{
+						{
+							Key:  cfg.CACertKey,
+							Path: "ca.crt",
+						},
+					},
+				},
+			}
+		}
+		pod.Spec.Volumes = append(pod.Spec.Volumes, caCertVolume)
+	}
+
 	// Add volume mount to all existing containers
 	secretsVolumeMount := corev1.VolumeMount{
 		Name:      "keeper-secrets",
@@ -197,6 +232,23 @@ func (m *PodMutator) mutatePod(ctx context.Context, pod *corev1.Pod, cfg *config
 
 // buildInitContainer creates the init container spec
 func (m *PodMutator) buildInitContainer(cfg *config.InjectionConfig, configJSON string) corev1.Container {
+	volumeMounts := []corev1.VolumeMount{
+		{
+			Name:      "keeper-secrets",
+			MountPath: config.DefaultSecretsPath,
+		},
+	}
+
+	// Add CA cert volume mount if configured
+	if cfg.CACertSecret != "" || cfg.CACertConfigMap != "" {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "keeper-ca-cert",
+			MountPath: "/usr/local/share/ca-certificates/keeper-ca.crt",
+			SubPath:   "ca.crt",
+			ReadOnly:  true,
+		})
+	}
+
 	return corev1.Container{
 		Name:            "keeper-secrets-init",
 		Image:           m.config.SidecarImage,
@@ -219,12 +271,7 @@ func (m *PodMutator) buildInitContainer(cfg *config.InjectionConfig, configJSON 
 				},
 			},
 		},
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      "keeper-secrets",
-				MountPath: config.DefaultSecretsPath,
-			},
-		},
+		VolumeMounts: volumeMounts,
 		Resources: m.buildResourceRequirements(),
 		SecurityContext: &corev1.SecurityContext{
 			RunAsNonRoot:             boolPtr(true),
@@ -269,12 +316,7 @@ func (m *PodMutator) buildSidecarContainer(cfg *config.InjectionConfig, configJS
 				},
 			},
 		},
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      "keeper-secrets",
-				MountPath: config.DefaultSecretsPath,
-			},
-		},
+		VolumeMounts: m.buildVolumeMounts(cfg),
 		Resources: m.buildResourceRequirements(),
 		SecurityContext: &corev1.SecurityContext{
 			RunAsNonRoot:             boolPtr(true),
@@ -305,6 +347,28 @@ func (m *PodMutator) buildSidecarContainer(cfg *config.InjectionConfig, configJS
 			PeriodSeconds:       10,
 		},
 	}
+}
+
+// buildVolumeMounts creates volume mounts for init and sidecar containers
+func (m *PodMutator) buildVolumeMounts(cfg *config.InjectionConfig) []corev1.VolumeMount {
+	mounts := []corev1.VolumeMount{
+		{
+			Name:      "keeper-secrets",
+			MountPath: config.DefaultSecretsPath,
+		},
+	}
+
+	// Add CA cert mount if configured (for corporate proxies/SSL inspection)
+	if cfg.CACertSecret != "" || cfg.CACertConfigMap != "" {
+		mounts = append(mounts, corev1.VolumeMount{
+			Name:      "keeper-ca-cert",
+			MountPath: "/usr/local/share/ca-certificates/keeper-ca.crt",
+			SubPath:   "ca.crt",
+			ReadOnly:  true,
+		})
+	}
+
+	return mounts
 }
 
 // buildResourceRequirements creates resource requirements for containers

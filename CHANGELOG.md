@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Custom CA Certificate Support** - For corporate proxies and SSL inspection
+  - `keeper.security/ca-cert-secret` - Load CA cert from Kubernetes Secret
+  - `keeper.security/ca-cert-configmap` - Load CA cert from ConfigMap
+  - Supports Zscaler, Palo Alto, Cisco Umbrella, and other SSL inspection tools
+  - Automatic cert pool integration for all HTTPS connections
 - **Go Template Support** - Industry-standard template rendering
   - Custom secret formatting with Go templates
   - 100+ Sprig template functions (date/time, crypto, string, encoding)
