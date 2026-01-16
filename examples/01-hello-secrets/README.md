@@ -12,17 +12,28 @@ The simplest possible demo of Keeper K8s Injector. A web page that displays your
 
 ## Prerequisites
 
-1. Keeper K8s Injector installed in your cluster
-2. A Keeper Secrets Manager application with a config file
+1. cert-manager installed (see [Quick Start](../../docs/quickstart.md#step-0-install-cert-manager-if-not-already-installed))
+2. Keeper K8s Injector installed in your cluster
+3. A Keeper Secrets Manager application with a config file
 
 ## Quick Start
 
 ### 1. Create Your KSM Auth Secret
 
+**Option 1: Base64 Config**
+
+From Keeper: Vault → Secrets Manager → Select Application → Devices → Add Device → Base64
+
 ```bash
-# If you haven't already, create the auth secret from your KSM config
 kubectl create secret generic keeper-credentials \
-  --from-file=config=path/to/your/ksm-config.json
+  --from-literal=config='<paste-base64-config-here>'
+```
+
+**Option 2: Config File**
+
+```bash
+kubectl create secret generic keeper-credentials \
+  --from-file=config=ksm-config.json
 ```
 
 ### 2. Create a Secret in Keeper

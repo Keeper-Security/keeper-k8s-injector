@@ -196,11 +196,14 @@ spec:
           </html>
           HTMLEOF
 
-            # Replace placeholders
-            sed -i "s|STRIPE_PLACEHOLDER|$STRIPE_ROW|g" /usr/share/nginx/html/index.html
-            sed -i "s|SLACK_PLACEHOLDER|$SLACK_ROW|g" /usr/share/nginx/html/index.html
-            sed -i "s|AWS_PLACEHOLDER|$AWS_ROW|g" /usr/share/nginx/html/index.html
-            sed -i "s|TIMESTAMP_PLACEHOLDER|$TIMESTAMP|g" /usr/share/nginx/html/index.html
+            # Replace placeholders - use @ delimiter and escape special chars
+            STRIPE_SAFE=$(printf '%s\n' "$STRIPE_ROW" | sed -e 's/[]\/$*.^[]/\\&/g')
+            SLACK_SAFE=$(printf '%s\n' "$SLACK_ROW" | sed -e 's/[]\/$*.^[]/\\&/g')
+            AWS_SAFE=$(printf '%s\n' "$AWS_ROW" | sed -e 's/[]\/$*.^[]/\\&/g')
+            sed -i "s@STRIPE_PLACEHOLDER@$STRIPE_SAFE@g" /usr/share/nginx/html/index.html
+            sed -i "s@SLACK_PLACEHOLDER@$SLACK_SAFE@g" /usr/share/nginx/html/index.html
+            sed -i "s@AWS_PLACEHOLDER@$AWS_SAFE@g" /usr/share/nginx/html/index.html
+            sed -i "s@TIMESTAMP_PLACEHOLDER@$TIMESTAMP@g" /usr/share/nginx/html/index.html
           }
 
           # Initial page generation

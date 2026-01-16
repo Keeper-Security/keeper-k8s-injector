@@ -49,8 +49,19 @@ kubectl apply -f https://github.com/Keeper-Security/keeper-k8s-injector/releases
 
 ### 1. Create KSM Auth Secret
 
+**Option 1: Base64 Config (Recommended)**
+
+From Keeper: Vault → Secrets Manager → Select Application → Devices → Add Device → Base64
+
 ```bash
-# From your Keeper Secrets Manager config file
+kubectl create secret generic keeper-auth \
+  --from-literal=config='<paste-base64-config-here>' \
+  --namespace default
+```
+
+**Option 2: Config File**
+
+```bash
 kubectl create secret generic keeper-auth \
   --from-file=config=ksm-config.json \
   --namespace default
@@ -168,6 +179,7 @@ Images are available on [Docker Hub](https://hub.docker.com/u/keeper) with multi
 ## Requirements
 
 - Kubernetes 1.25+
+- [cert-manager](https://cert-manager.io/) (for TLS certificates)
 - Keeper Secrets Manager application
 
 ## Links

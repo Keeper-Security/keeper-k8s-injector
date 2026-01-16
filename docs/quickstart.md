@@ -6,7 +6,21 @@ Get secrets injected into your pods in 5 minutes.
 
 - Kubernetes cluster (1.25+)
 - `kubectl` configured
+- [cert-manager](https://cert-manager.io/) installed (required for webhook TLS)
 - Keeper Secrets Manager application configured
+
+## Step 0: Install cert-manager (if not already installed)
+
+The injector requires cert-manager to manage webhook TLS certificates:
+
+```bash
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.1/cert-manager.yaml
+
+# Wait for cert-manager to be ready
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout=120s
+```
+
+> **Note**: cert-manager is a widely-used CNCF project. Many clusters already have it installed. Check with `kubectl get pods -n cert-manager`
 
 ## Step 1: Install the Injector
 
@@ -49,11 +63,27 @@ keeper-injector-webhook-xxxxx-yyy   1/1     Running   0          30s
 
 ## Step 2: Create Auth Secret
 
-Export your KSM configuration and create a Kubernetes secret:
+Create a Kubernetes secret with your KSM configuration:
+
+**Option 1: Base64 Config (Recommended)**
+
+From Keeper Secrets Manager:
+1. Navigate to: Vault → Secrets Manager → Select your Application
+2. Go to Devices tab → Add Device
+3. Select "Configuration File" method and "Base64" type
+4. Copy the base64 string
 
 ```bash
-# From Keeper Secrets Manager, download your config.json
-# Then create the secret:
+kubectl create secret generic keeper-credentials \
+  --from-literal=config='<paste-base64-config-here>' \
+  -n default
+```
+
+**Option 2: Config File**
+
+If you downloaded a JSON config file:
+
+```bash
 kubectl create secret generic keeper-credentials \
   --from-file=config=ksm-config.json \
   -n default
