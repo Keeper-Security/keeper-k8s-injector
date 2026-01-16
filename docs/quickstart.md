@@ -4,7 +4,7 @@ Get secrets injected into your pods in 5 minutes.
 
 ## Prerequisites
 
-- Kubernetes cluster (1.25+)
+- Kubernetes cluster (1.21+, tested with 1.21-1.34)
 - `kubectl` configured
 - [cert-manager](https://cert-manager.io/) installed (required for webhook TLS)
 - Keeper Secrets Manager application configured

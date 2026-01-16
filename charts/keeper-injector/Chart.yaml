@@ -4,7 +4,7 @@ description: Keeper Secrets Manager Kubernetes Injector - Inject secrets into po
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
-kubeVersion: ">=1.25.0-0"
+kubeVersion: ">=1.21.0-0"
 home: https://www.keepersecurity.com
 icon: https://keepersecurity.com/vault/images/keeper_icons/icon_rounded_256.png
 sources:

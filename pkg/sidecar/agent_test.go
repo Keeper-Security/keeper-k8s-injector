@@ -116,7 +116,9 @@ func TestWriteSecretFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		_ = os.RemoveAll(tmpDir) // Ignore cleanup errors in tests
+	}()
 
 	agent := &Agent{
 		logger: zap.NewNop(), // Use nop logger

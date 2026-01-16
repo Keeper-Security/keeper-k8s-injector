@@ -107,7 +107,9 @@ func (a *Agent) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to create KSM client: %w", err)
 	}
 	a.ksmClient = client
-	defer client.Close()
+	defer func() {
+		_ = client.Close() // Ignore close errors in defer
+	}()
 
 	// Initial fetch
 	if err := a.fetchAllSecrets(ctx); err != nil {
@@ -364,7 +366,7 @@ func (a *Agent) writeSecretFile(path string, data []byte) error {
 	}
 
 	if err := os.Rename(tmpPath, path); err != nil {
-		os.Remove(tmpPath) // Clean up on failure
+		_ = os.Remove(tmpPath) // Clean up on failure, ignore errors
 		return fmt.Errorf("failed to rename temp file: %w", err)
 	}
 
