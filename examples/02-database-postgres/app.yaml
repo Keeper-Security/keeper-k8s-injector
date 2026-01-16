@@ -22,8 +22,12 @@ spec:
         keeper.security/inject: "true"
         # Reference to your KSM auth secret
         keeper.security/auth-secret: "keeper-credentials"
-        # The title of your database credentials record in Keeper
-        keeper.security/secret: "postgres-credentials"
+        # Use YAML config to specify .env format (no jq needed!)
+        keeper.security/config: |
+          secrets:
+            - record: postgres-credentials
+              path: /keeper/secrets/postgres-credentials.env
+              format: env
         # Check for credential updates every minute
         keeper.security/refresh-interval: "60s"
     spec:
@@ -36,18 +40,15 @@ spec:
         - /bin/sh
         - -c
         - |
-          # Install dependencies
-          apk add --no-cache curl jq
+          # No dependencies needed! Using .env format
 
           # Function to read credentials from Keeper secret
           get_creds() {
-            if [ -f "/keeper/secrets/postgres-credentials.json" ]; then
-              SECRET=$(cat /keeper/secrets/postgres-credentials.json)
-              DB_USER=$(echo "$SECRET" | jq -r '.login // .username // "demouser"')
-              DB_PASS=$(echo "$SECRET" | jq -r '.password // empty')
-              if [ -z "$DB_PASS" ]; then
-                DB_PASS=$(echo "$SECRET" | jq -r '.fields[] | select(.type=="password") | .value[0]' 2>/dev/null || echo "")
-              fi
+            if [ -f "/keeper/secrets/postgres-credentials.env" ]; then
+              # Source the .env file to load variables
+              export $(grep -v '^#' /keeper/secrets/postgres-credentials.env | xargs)
+              DB_USER="${LOGIN:-${USERNAME:-demouser}}"
+              DB_PASS="${PASSWORD:-initial-password-change-me}"
             else
               DB_USER="demouser"
               DB_PASS="initial-password-change-me"
