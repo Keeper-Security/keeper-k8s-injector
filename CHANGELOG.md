@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-01-16
+
+### Added
+
+- **Go Template Support** - Industry-standard template rendering
+  - Custom secret formatting with Go templates
+  - 100+ Sprig template functions (date/time, crypto, string, encoding)
+  - Build connection strings without JSON parsing
+  - Conditional logic and default values
+  - Template functions: base64enc/dec, sha256sum, sha512sum, upper, lower, trim, and more
+- **Additional Secret Formats**
+  - Properties format (Java .properties files)
+  - YAML format
+  - INI format
+- **Template Examples** (examples/07-templates/)
+  - Connection string templates
+  - Properties file generation
+  - Shell script generation
+  - Conditional environment configs
+- **Documentation**
+  - docs/templates.md - Complete template guide with function reference
+  - docs/comparison.md - Feature comparison with Vault, ESO, AWS CSI, 1Password
+  - ROADMAP.md - Product roadmap and planned features
+  - Professional tone improvements across all documentation
+- **Development**
+  - CLAUDE.md updated with development rules and professional tone guidelines
+  - Feature request template
+
+### Changed
+
+- **BREAKING:** Minimum Kubernetes version: 1.25+ → 1.21+ (supports 4 more versions!)
+- Go 1.23.12 → 1.25.6 (latest stable)
+- Kubernetes libraries v0.32.0 → v0.34.3 (matches Vault & ESO)
+- controller-runtime v0.19.3 → v0.22.4 (latest)
+
+### Security
+
+- **FIXED: All 15 vulnerabilities** (3 HIGH, 12 MEDIUM)
+- golang.org/x/oauth2 v0.25.0 → v0.27.0 (CVE-2025-22868)
+- golang.org/x/net v0.33.0 → v0.38.0 (CVE-2025-58183, CVE-2025-22870)
+- Go stdlib vulnerabilities fixed by Go 1.25.6 upgrade
+  - crypto/x509, net/http, encoding/asn1, encoding/pem, crypto/tls, net/url fixes
+
+### Fixed
+
+- Linter errors: unchecked error returns in Close(), Remove(), RemoveAll()
+- De Morgan's law optimization in UID validation
+
 ## [0.1.3] - 2026-01-15
 
 ### Added
