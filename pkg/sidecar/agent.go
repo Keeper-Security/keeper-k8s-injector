@@ -32,6 +32,7 @@ type SecretConfig struct {
 	Name     string   `json:"name"`
 	Path     string   `json:"path"`
 	Format   string   `json:"format"`
+	Template string   `json:"template,omitempty"` // Go template string for custom formatting
 	Fields   []string `json:"fields,omitempty"`
 	Notation string   `json:"notation,omitempty"` // Keeper notation (e.g., keeper://UID/field/password)
 	FileName string   `json:"fileName,omitempty"` // For file attachments
@@ -270,9 +271,9 @@ func (a *Agent) fetchSecret(ctx context.Context, cfg SecretConfig) error {
 					filtered[f] = v
 				}
 			}
-			data, err = formatSecret(filtered, cfg.Format)
+			data, err = formatSecret(filtered, cfg)
 		} else {
-			data, err = formatSecret(secret.Fields, cfg.Format)
+			data, err = formatSecret(secret.Fields, cfg)
 		}
 
 		if err != nil {
@@ -371,13 +372,27 @@ func (a *Agent) writeSecretFile(path string, data []byte) error {
 	return nil
 }
 
-// formatSecret formats secret data according to the specified format
-func formatSecret(data map[string]interface{}, format string) ([]byte, error) {
-	switch format {
+// formatSecret formats secret data according to the configuration.
+// Supports templates, multiple formats, and maintains backward compatibility.
+// This follows Clean Architecture by delegating rendering to specialized functions.
+func formatSecret(data map[string]interface{}, cfg SecretConfig) ([]byte, error) {
+	// If template is specified, use template rendering
+	if cfg.Template != "" {
+		return renderTemplate(data, cfg.Template)
+	}
+
+	// Otherwise use format-based rendering
+	switch cfg.Format {
 	case "json", "":
 		return json.MarshalIndent(data, "", "  ")
 	case "env":
 		return formatAsEnv(data), nil
+	case "properties":
+		return formatAsProperties(data), nil
+	case "yaml":
+		return formatAsYAML(data)
+	case "ini":
+		return formatAsINI(data), nil
 	case "raw":
 		// For single values, return raw
 		if len(data) == 1 {

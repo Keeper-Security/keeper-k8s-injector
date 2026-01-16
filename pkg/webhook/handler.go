@@ -336,6 +336,9 @@ func (m *PodMutator) buildSidecarConfig(cfg *config.InjectionConfig) map[string]
 		if s.Notation != "" {
 			secret["notation"] = s.Notation
 		}
+		if s.Template != "" {
+			secret["template"] = s.Template
+		}
 		if s.FileName != "" {
 			secret["fileName"] = s.FileName
 		}

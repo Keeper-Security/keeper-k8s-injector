@@ -80,7 +80,7 @@ func TestFormatSecret(t *testing.T) {
 	}
 
 	// Test JSON format
-	jsonResult, err := formatSecret(data, "json")
+	jsonResult, err := formatSecret(data, SecretConfig{Format: "json"})
 	if err != nil {
 		t.Fatalf("formatSecret(json) error = %v", err)
 	}
@@ -89,7 +89,7 @@ func TestFormatSecret(t *testing.T) {
 	}
 
 	// Test env format
-	envResult, err := formatSecret(data, "env")
+	envResult, err := formatSecret(data, SecretConfig{Format: "env"})
 	if err != nil {
 		t.Fatalf("formatSecret(env) error = %v", err)
 	}
@@ -101,7 +101,7 @@ func TestFormatSecret(t *testing.T) {
 	singleData := map[string]interface{}{
 		"password": "secret123",
 	}
-	rawResult, err := formatSecret(singleData, "raw")
+	rawResult, err := formatSecret(singleData, SecretConfig{Format: "raw"})
 	if err != nil {
 		t.Fatalf("formatSecret(raw) error = %v", err)
 	}

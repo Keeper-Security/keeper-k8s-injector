@@ -1,0 +1,199 @@
+# Template Examples - Keeper K8s Injector
+#
+# Demonstrates Go template rendering for flexible secret formatting.
+# Build connection strings, config files, and more without parsing JSON!
+#
+# Usage:
+#   1. Create secrets in Keeper (see README)
+#   2. kubectl apply -f .
+#   3. kubectl port-forward svc/template-demo 8080:80
+#   4. Open http://localhost:8080
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: template-demo
+  labels:
+    app: template-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: template-demo
+  template:
+    metadata:
+      labels:
+        app: template-demo
+      annotations:
+        # Enable Keeper injection
+        keeper.security/inject: "true"
+        # Reference to your KSM auth secret
+        keeper.security/auth-secret: "keeper-credentials"
+        # Template examples - build custom formats from Keeper data
+        keeper.security/config: |
+          secrets:
+            # Example 1: Connection string template
+            - record: postgres-credentials
+              path: /app/examples/01-connection-string.txt
+              template: |
+                postgresql://{{ .login }}:{{ .password }}@{{ .hostname | default "postgres" }}:5432/{{ .database | default "mydb" }}
+
+            # Example 2: Properties file
+            - record: postgres-credentials
+              path: /app/examples/02-application.properties
+              template: |
+                app.database.url=jdbc:postgresql://{{ .hostname | default "localhost" }}:5432/mydb
+                app.database.username={{ .login }}
+                app.database.password={{ .password | base64enc }}
+                app.database.pool.size=10
+
+            # Example 3: Environment variables script
+            - record: postgres-credentials
+              path: /app/examples/03-database.sh
+              template: |
+                #!/bin/bash
+                export DB_HOST="{{ .hostname | default "localhost" }}"
+                export DB_PORT="5432"
+                export DB_NAME="mydb"
+                export DB_USER="{{ .login }}"
+                export DB_PASS="{{ .password }}"
+                export DB_URL="postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+
+            # Example 4: INI configuration
+            - record: postgres-credentials
+              path: /app/examples/04-database.ini
+              template: |
+                [database]
+                host={{ .hostname | default "localhost" }}
+                port=5432
+                database=mydb
+                username={{ .login }}
+                password={{ .password }}
+
+            # Example 5: Using template functions
+            - record: postgres-credentials
+              path: /app/examples/05-functions.txt
+              template: |
+                Uppercase: {{ .login | upper }}
+                Lowercase: {{ .hostname | default "LOCALHOST" | lower }}
+                SHA256: {{ .password | sha256sum }}
+                Base64: {{ .password | base64enc }}
+                Trimmed: {{ .notes | default "  notes  " | trim }}
+
+            # Example 6: Conditional logic
+            - record: app-config
+              path: /app/examples/06-conditional.conf
+              template: |
+                {{- if eq .environment "production" -}}
+                # Production configuration
+                log_level=error
+                debug=false
+                api_url=https://api.prod.example.com
+                {{- else -}}
+                # Development configuration
+                log_level=debug
+                debug=true
+                api_url=https://api.dev.example.com
+                {{- end -}}
+    spec:
+      containers:
+      - name: demo
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html
+          mountPath: /usr/share/nginx/html
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Generate demo page showing all template outputs
+          cat > /usr/share/nginx/html/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Template Examples</title>
+            <style>
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                max-width: 1000px;
+                margin: 40px auto;
+                padding: 20px;
+                background: #f5f5f5;
+              }
+              h1 { color: #333; }
+              .example {
+                background: white;
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 20px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              }
+              .example h3 {
+                margin-top: 0;
+                color: #0066cc;
+              }
+              pre {
+                background: #1a1a2e;
+                color: #00ff88;
+                padding: 15px;
+                border-radius: 4px;
+                overflow-x: auto;
+                font-family: monospace;
+                font-size: 13px;
+              }
+              .note {
+                background: #e8f4e8;
+                border-left: 4px solid #4CAF50;
+                padding: 15px;
+                margin-top: 20px;
+              }
+            </style>
+          </head>
+          <body>
+            <h1>Template Examples</h1>
+            <p>These examples show how to use Go templates to format secrets from Keeper.</p>
+          EOF
+
+          # Add each example to the page
+          for i in /app/examples/*.txt /app/examples/*.sh /app/examples/*.properties /app/examples/*.ini /app/examples/*.conf; do
+            if [ -f "$i" ]; then
+              filename=$(basename "$i")
+              echo "<div class='example'><h3>$filename</h3><pre>$(cat "$i" | head -20)</pre></div>" >> /usr/share/nginx/html/index.html
+            fi
+          done
+
+          cat >> /usr/share/nginx/html/index.html << 'EOF'
+            <div class="note">
+              <h3>Template Benefits</h3>
+              <ul>
+                <li>Build connection strings without shell parsing</li>
+                <li>Generate any config file format</li>
+                <li>Use 100+ Sprig functions for transformations</li>
+                <li>Conditional logic for environment-specific configs</li>
+              </ul>
+            </div>
+          </body>
+          </html>
+          EOF
+
+          # Start nginx
+          nginx -g 'daemon off;'
+      volumes:
+      - name: html
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: template-demo
+  labels:
+    app: template-demo
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: template-demo

@@ -78,6 +78,28 @@ annotations:
         format: json
 ```
 
+### Level 6: Templates (Advanced)
+
+Use Go templates for custom formatting:
+
+```yaml
+annotations:
+  keeper.security/inject: "true"
+  keeper.security/auth-secret: "keeper-auth"
+  keeper.security/config: |
+    secrets:
+      - record: postgres-credentials
+        path: /app/config/database.sh
+        template: |
+          export DB_USER="{{ .login }}"
+          export DB_PASS="{{ .password }}"
+          export DB_URL="postgresql://{{ .login }}:{{ .password }}@{{ .hostname }}:5432/mydb"
+```
+
+Result: Shell script with connection string built from Keeper fields.
+
+Templates support 100+ functions from [Sprig](http://masterminds.github.io/sprig/). See [Template Guide](templates.md) for details.
+
 ## Behavior Annotations
 
 | Annotation | Default | Description |
@@ -97,13 +119,19 @@ annotations:
 
 ## Output Formats
 
-When using Level 5 configuration, you can specify output format:
+When using Level 5+ configuration, you can specify output format:
 
 | Format | Description | Example Output |
 |--------|-------------|----------------|
 | `json` | JSON object (default) | `{"login": "user", "password": "pass"}` |
 | `env` | Environment file | `LOGIN=user\nPASSWORD=pass` |
+| `properties` | Java properties | `login=user\npassword=pass` |
+| `yaml` | YAML format | `login: user\npassword: pass` |
+| `ini` | INI format | `[secret]\nlogin=user\npassword=pass` |
 | `raw` | Raw value (single field only) | `mypassword123` |
+| `template` | Custom via Go template | User-defined format |
+
+For `template` format, use the `template:` field to specify a Go template string. See [Template Guide](templates.md).
 
 ## Examples
 

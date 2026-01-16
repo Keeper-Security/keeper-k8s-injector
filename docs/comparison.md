@@ -35,12 +35,13 @@ This document compares Keeper Kubernetes Secrets Injector with industry-standard
 |--------|--------|-------------|-----|---------|-----------|
 | **JSON** | ✅ Default | ✅ Via template | ✅ Default | ✅ | ✅ |
 | **.env format** | ✅ Built-in | ✅ Via template | ✅ Via template | ❌ | ❌ |
-| **Properties** | ❌ Missing | ✅ Via template | ✅ Via template | ❌ | ❌ |
-| **YAML** | ❌ Missing | ✅ Via template | ✅ Via template | ❌ | ❌ |
-| **Custom templates** | ❌ Missing | ✅ Go templates | ✅ Go templates | ❌ | ❌ |
-| **Shell scripts** | ⚠️ Via .env | ✅ Via template | ✅ Via template | ❌ | ❌ |
+| **Properties** | ✅ Built-in | ✅ Via template | ✅ Via template | ❌ | ❌ |
+| **YAML** | ✅ Built-in | ✅ Via template | ✅ Via template | ❌ | ❌ |
+| **INI** | ✅ Built-in | ✅ Via template | ✅ Via template | ❌ | ❌ |
+| **Custom templates** | ✅ Go templates + Sprig | ✅ Go templates | ✅ Go templates | ❌ | ❌ |
+| **Shell scripts** | ✅ Via template | ✅ Via template | ✅ Via template | ❌ | ❌ |
 
-**Winner:** Vault Agent, ESO (tie) - Full template flexibility
+**Winner:** Keeper, Vault Agent, ESO (tie) - All have full template flexibility
 
 ---
 
@@ -49,9 +50,9 @@ This document compares Keeper Kubernetes Secrets Injector with industry-standard
 | Feature | Keeper | Vault Agent | ESO | AWS CSI | 1Password |
 |---------|--------|-------------|-----|---------|-----------|
 | **Specific field extraction** | ✅ Keeper notation | ✅ Template syntax | ✅ dataFrom | ❌ | ⚠️ Limited |
-| **Field remapping** | ❌ | ✅ Templates | ✅ Templates | ❌ | ❌ |
-| **Computed values** | ❌ | ✅ Template functions | ✅ Template functions | ❌ | ❌ |
-| **String concatenation** | ❌ | ✅ Templates | ✅ Templates | ❌ | ❌ |
+| **Field remapping** | ✅ Templates | ✅ Templates | ✅ Templates | ❌ | ❌ |
+| **Computed values** | ✅ Template functions | ✅ Template functions | ✅ Template functions | ❌ | ❌ |
+| **String concatenation** | ✅ Templates | ✅ Templates | ✅ Templates | ❌ | ❌ |
 
 **Example - Build connection string:**
 
@@ -68,13 +69,13 @@ template:
     connectionString: "postgresql://{{ .username }}:{{ .password }}@postgres:5432/mydb"
 ```
 
-**Keeper (current):**
+**Keeper:**
 ```yaml
-# Can't do this - would need templates
-# Workaround: Fetch fields separately and build string in app code
+template: |
+  postgresql://{{ .login }}:{{ .password }}@postgres:5432/mydb
 ```
 
-**Winner:** Vault Agent, ESO (tie) - Template-based concatenation
+**Winner:** Keeper, Vault Agent, ESO (tie) - All have template-based field manipulation
 
 ---
 
@@ -250,13 +251,15 @@ template: |
 
 ## Implementation Gaps
 
-| Gap | Impact | Workaround |
-|-----|--------|------------|
-| No Go templates | High | Users parse JSON/env in app code |
-| No connection string builder | Medium | Users construct in app |
-| No field remapping | Low | Use env format with source |
-| No conditional logic | Low | Use separate records per environment |
-| No template functions | Medium | Process in app code |
+| Gap | Impact | Status |
+|-----|--------|--------|
+| ~~No Go templates~~ | ~~High~~ | ✅ Implemented |
+| ~~No connection string builder~~ | ~~Medium~~ | ✅ Via templates |
+| ~~No field remapping~~ | ~~Low~~ | ✅ Via templates |
+| ~~No conditional logic~~ | ~~Low~~ | ✅ Built-in with Go templates |
+| ~~No template functions~~ | ~~Medium~~ | ✅ 100+ Sprig functions |
+| ConfigMap templates | Low | Planned |
+| Secret validation | Low | Planned |
 
 ---
 
@@ -269,12 +272,14 @@ template: |
 3. **Folder support** - Batch fetch secrets
 4. **No CRDs** - Pure annotations (simpler than ESO)
 5. **Signal support** - App notification on rotation
+6. **Template flexibility** - Go templates + 100+ Sprig functions
+7. **Format variety** - JSON, env, properties, YAML, INI, or custom templates
 
 ### Where Keeper Loses
 
-1. **Template flexibility** - Vault/ESO have full Go templates
-2. **Dynamic secrets** - Vault generates short-lived DB credentials
-3. **Format variety** - Limited to json/env/raw
+1. **Dynamic secrets** - Vault generates short-lived DB credentials
+2. **ConfigMap templates** - Not yet implemented (planned)
+3. **Secret validation** - Not yet implemented (planned)
 
 ### Where It Matters
 

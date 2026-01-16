@@ -52,8 +52,10 @@ type SecretRef struct {
 	Path string
 	// Fields to extract (empty = all fields)
 	Fields []string
-	// Format: json, env, raw
+	// Format: json, env, raw, properties, yaml, ini
 	Format string
+	// Template is a Go template string for custom formatting
+	Template string
 	// Notation is the full Keeper notation string (e.g., keeper://UID/field/password)
 	// If set, this takes precedence over Name/Fields
 	Notation string
@@ -414,8 +416,10 @@ type SecretYAMLConfig struct {
 	Path string `yaml:"path,omitempty"`
 	// Fields to extract (empty = all)
 	Fields []string `yaml:"fields,omitempty"`
-	// Format: json, env, raw
+	// Format: json, env, raw, properties, yaml, ini
 	Format string `yaml:"format,omitempty"`
+	// Template is a Go template string for custom formatting
+	Template string `yaml:"template,omitempty"`
 	// File is for file attachment downloads
 	File string `yaml:"file,omitempty"`
 }
@@ -440,7 +444,8 @@ func parseFullConfig(configYAML string) ([]SecretRef, []FolderRef, error) {
 	var secrets []SecretRef
 	for _, s := range cfg.Secrets {
 		ref := SecretRef{
-			Format: s.Format,
+			Format:   s.Format,
+			Template: s.Template,
 		}
 
 		// Set default format
