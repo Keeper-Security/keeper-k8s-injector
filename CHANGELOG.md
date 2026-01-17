@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-01-17
+
+### Fixed
+
+- All documentation updated to use `helm upgrade --install` (idempotent, works for both install and upgrade)
+- Added troubleshooting for "invalid ownership metadata" error during reinstall
+- Example 01 now includes complete from-zero setup with explanations
+- Examples 02-11 reference Example 01 for installation instructions
+
+### Documentation
+
+- Example 01: Added "Why" explanations for cert-manager and injector installation
+- Example 01: Direct GitHub URLs for kubectl apply (no git clone needed)
+- Example 01: Explicit requirement that record title must be "demo-secret"
+- All examples: Cleaner prerequisites sections
+
 ## [0.4.0] - 2026-01-17
 
 ### Added

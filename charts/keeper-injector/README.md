@@ -19,7 +19,7 @@ Automatically inject secrets from [Keeper Secrets Manager](https://www.keepersec
 ### Quick Install
 
 ```bash
-helm install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
+helm upgrade --install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
   --namespace keeper-system \
   --create-namespace
 ```
@@ -28,7 +28,7 @@ helm install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
 
 ```bash
 helm repo add keeper https://keeper-security.github.io/keeper-k8s-injector
-helm install keeper-injector keeper/keeper-injector \
+helm upgrade --install keeper-injector keeper/keeper-injector \
   --namespace keeper-system \
   --create-namespace
 ```
@@ -36,7 +36,7 @@ helm install keeper-injector keeper/keeper-injector \
 ### With Custom Values
 
 ```bash
-helm install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
+helm upgrade --install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
   --namespace keeper-system \
   --create-namespace \
   --set replicaCount=3 \

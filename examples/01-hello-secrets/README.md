@@ -20,6 +20,8 @@ The simplest possible demo of Keeper K8s Injector. A web page that displays your
 
 ### Step 1: Install cert-manager
 
+**Why:** The Keeper injector webhook requires TLS certificates. cert-manager automatically manages these certificates.
+
 ```bash
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.1/cert-manager.yaml
 
@@ -27,12 +29,16 @@ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout=120s
 ```
 
+**Note:** Many clusters already have cert-manager. Check first: `kubectl get pods -n cert-manager`
+
 ### Step 2: Install Keeper K8s Injector
+
+**Why:** This installs the webhook that injects secrets into your pods.
 
 **Option A: Helm (recommended)**
 
 ```bash
-helm install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
+helm upgrade --install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
   --namespace keeper-system \
   --create-namespace
 ```
@@ -46,6 +52,18 @@ kubectl apply -f https://github.com/Keeper-Security/keeper-k8s-injector/releases
 Verify installation:
 ```bash
 kubectl get pods -n keeper-system
+
+# Expected output:
+# NAME                                      READY   STATUS    RESTARTS   AGE
+# keeper-injector-webhook-xxxxx-xxx         1/1     Running   0          30s
+# keeper-injector-webhook-xxxxx-yyy         1/1     Running   0          30s
+```
+
+**Troubleshooting:** If you get "invalid ownership metadata" error, you have an old installation:
+```bash
+helm uninstall keeper-injector -n keeper-system
+kubectl delete pdb keeper-injector -n keeper-system
+# Then run the install command again
 ```
 
 ### Step 3: Create KSM Auth Secret

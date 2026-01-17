@@ -24,7 +24,8 @@ Automatically inject secrets from [Keeper Secrets Manager](https://www.keepersec
 ### Option 1: Helm (OCI Registry) - Recommended
 
 ```bash
-helm install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
+# Works for both new installation and upgrades
+helm upgrade --install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
   --namespace keeper-system \
   --create-namespace
 ```
@@ -34,7 +35,7 @@ helm install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
 ```bash
 helm repo add keeper https://keeper-security.github.io/keeper-k8s-injector
 helm repo update
-helm install keeper-injector keeper/keeper-injector \
+helm upgrade --install keeper-injector keeper/keeper-injector \
   --namespace keeper-system \
   --create-namespace
 ```

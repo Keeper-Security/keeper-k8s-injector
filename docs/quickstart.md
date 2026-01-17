@@ -27,7 +27,7 @@ kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manage
 ### Option 1: Helm (OCI Registry) - Recommended
 
 ```bash
-helm install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
+helm upgrade --install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
   --namespace keeper-system \
   --create-namespace
 ```
@@ -37,7 +37,7 @@ helm install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
 ```bash
 helm repo add keeper https://keeper-security.github.io/keeper-k8s-injector
 helm repo update
-helm install keeper-injector keeper/keeper-injector \
+helm upgrade --install keeper-injector keeper/keeper-injector \
   --namespace keeper-system \
   --create-namespace
 ```

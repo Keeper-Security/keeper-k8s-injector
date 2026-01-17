@@ -56,13 +56,13 @@ The release workflow (`.github/workflows/release.yaml`) will:
 
 ### Method 1: Helm (OCI Registry)
 ```bash
-helm install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector --version X.Y.Z
+helm upgrade --install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector --version X.Y.Z
 ```
 
 ### Method 2: Helm (HTTP Repository)
 ```bash
 helm repo add keeper https://keeper-security.github.io/keeper-k8s-injector
-helm install keeper-injector keeper/keeper-injector --version X.Y.Z
+helm upgrade --install keeper-injector keeper/keeper-injector --version X.Y.Z
 ```
 
 ### Method 3: kubectl (Direct YAML)
