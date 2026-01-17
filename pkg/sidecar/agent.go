@@ -15,6 +15,8 @@ import (
 
 	"github.com/keeper-security/keeper-k8s-injector/pkg/ksm"
 	"github.com/keeper-security/keeper-k8s-injector/pkg/metrics"
+	"github.com/keeper-security/keeper-k8s-injector/pkg/sidecar/cache"
+	"github.com/keeper-security/keeper-k8s-injector/pkg/sidecar/retry"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 )
