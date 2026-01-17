@@ -303,7 +303,7 @@ func (a *Agent) fetchSecret(ctx context.Context, cfg SecretConfig) error {
 
 		// No cache available
 		if a.config.FailOnError {
-			return fmt.Errorf("Keeper API unavailable and no cached value: %w", err)
+			return fmt.Errorf("keeper API unavailable and no cached value: %w", err)
 		}
 
 		// Graceful degradation

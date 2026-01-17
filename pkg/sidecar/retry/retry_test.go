@@ -109,7 +109,7 @@ func TestExponentialBackoff_Timing(t *testing.T) {
 
 	attempts := []time.Time{}
 
-	WithRetry(context.Background(), cfg, func() error {
+	_ = WithRetry(context.Background(), cfg, func() error {
 		attempts = append(attempts, time.Now())
 		return errors.New("fail")
 	})
@@ -143,7 +143,7 @@ func TestWithRetry_MaxDelayRespected(t *testing.T) {
 
 	attempts := []time.Time{}
 
-	WithRetry(context.Background(), cfg, func() error {
+	_ = WithRetry(context.Background(), cfg, func() error {
 		attempts = append(attempts, time.Now())
 		if len(attempts) >= 4 {
 			return nil  // Stop after 4 attempts

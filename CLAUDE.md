@@ -23,6 +23,29 @@ This is the Keeper Kubernetes Secrets Injector - a mutating admission webhook th
 - **NEVER** run Go commands or linters directly on the host
 - Use `docker run` or the dev Dockerfile for all development tasks
 
+## Pre-Commit Checklist (MANDATORY)
+
+**Before EVERY git push, run locally in Docker:**
+
+1. **Build test:**
+   ```bash
+   docker run --rm -v $(pwd):/app -w /app golang:1.25.6 go build -buildvcs=false ./cmd/webhook ./cmd/sidecar
+   ```
+
+2. **Run all tests:**
+   ```bash
+   docker run --rm -v $(pwd):/app -w /app golang:1.25.6 go test ./...
+   ```
+
+3. **Run linter:**
+   ```bash
+   docker run --rm -v $(pwd):/app -w /app golangci/golangci-lint:v1.65.2 golangci-lint run --timeout=5m
+   ```
+
+4. **Only after all pass:** git push
+
+**If CI fails after push, you skipped local testing. Don't let this happen.**
+
 ## Documentation Style
 
 - Use professional, matter-of-fact language
