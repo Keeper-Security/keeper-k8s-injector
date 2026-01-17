@@ -31,3 +31,29 @@ This is the Keeper Kubernetes Secrets Injector - a mutating admission webhook th
 - Avoid phrases like "secure!", "powerful!", "amazing!"
 - Use clear, technical descriptions instead of enthusiasm
 - Emojis are acceptable in user-facing demo UIs, but minimize in READMEs
+
+## Changelog Guidelines
+
+- **Be factual, not promotional** - State what was added, not why it's good
+- **No comparisons** - Don't mention competitors or "industry standard"
+- **No marketing language** - Avoid "production-grade", "best practice", "enterprise"
+- **No implementation details** - Remove Testing, Documentation, Dependencies sections
+- **Concise** - List features, not explanations
+- **Don't justify** - Don't explain "matches Vault" or "like ESO does"
+- **Avoid "BREAKING"** - Just state the change
+- **Keep Changed section minimal** - Or omit if changes are additions
+
+Example of what NOT to write:
+```
+- Industry-standard template rendering (matches Vault)
+- Production-grade resilience
+- BREAKING: Minimum K8s version changed
+- Testing: 15 comprehensive tests
+```
+
+Example of what TO write:
+```
+- Go template rendering with 100+ Sprig functions
+- Retry with exponential backoff
+- Kubernetes 1.21+ support
+```

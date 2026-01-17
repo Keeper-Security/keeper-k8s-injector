@@ -9,114 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Production-Grade Resilience** - Retry and caching for high availability
-  - Exponential backoff retry (3 attempts, 200ms-5s delays)
-  - In-memory secret caching (24-hour TTL)
-  - Graceful degradation when Keeper API unavailable
-  - Uses last known good values from cache
-  - Configurable via `keeper.security/fail-on-error` annotation
-
-- **Memory Security** (Matches Vault's Approach)
-  - Thread-safe in-memory cache (sync.RWMutex)
-  - No disk persistence (memory cleared on pod restart)
-  - Industry-standard approach (matches HashiCorp Vault)
-  - No cache encryption (standard practice, key management complexity)
-
-- **KSM Config Validation**
-  - Validates config format (JSON or base64)
-  - Checks for required fields (clientId)
-  - Prevents malformed configs from causing runtime failures
-
-### Testing
-
-- Retry package: 7 comprehensive tests (exponential backoff, context cancellation, timing)
-- Cache package: 8 comprehensive tests (TTL, concurrency, expiry, thread-safety)
-- All tests passing, linter clean
+- Retry with exponential backoff (3 attempts, 200ms-5s delays)
+- In-memory secret caching (24-hour TTL)
+- Cache fallback when Keeper API unavailable
+- Thread-safe cache implementation
+- KSM config validation (JSON or base64 format)
+- `keeper.security/fail-on-error` annotation controls fallback behavior
 
 
 ## [0.3.0] - 2026-01-17
 
 ### Added
 
-- **Cloud Secrets Provider Authentication** - Store KSM config in cloud instead of K8s Secrets
-  - AWS Secrets Manager via IRSA (IAM Roles for Service Accounts)
-  - GCP Secret Manager via Workload Identity
-  - Azure Key Vault via Workload Identity
-  - No static credentials in Kubernetes cluster
-  - CloudTrail/Cloud Logging audit trails
-  - Backward compatible (K8s Secret auth still default)
-
-### Documentation
-
-- docs/cloud-secrets.md - Complete setup guide for AWS/GCP/Azure
-- examples/08-aws-secrets-manager/ - AWS IRSA example with IAM setup
-- Updated docs/annotations.md with cloud provider annotations
-- Updated docs/features.md with authentication methods comparison
-
-### Testing
-
-- Comprehensive unit tests for cloud provider integrations
-- Input validation for all cloud secret references
-- Linter clean (0 issues)
-
-### Dependencies
-
-- github.com/aws/aws-sdk-go-v2/service/secretsmanager - AWS integration
-- cloud.google.com/go/secretmanager - GCP integration
-- github.com/Azure/azure-sdk-for-go/sdk/keyvault/azsecrets - Azure integration
+- AWS Secrets Manager authentication via IRSA (IAM Roles for Service Accounts)
+- GCP Secret Manager authentication via Workload Identity
+- Azure Key Vault authentication via Workload Identity
+- KSM config can be stored in cloud secrets stores
+- CloudTrail and Cloud Logging audit trails for config access
+- Backward compatible (K8s Secret auth remains default)
 
 ## [0.2.0] - 2026-01-16
 
 ### Added
 
-- **Custom CA Certificate Support** - For corporate proxies and SSL inspection
-  - `keeper.security/ca-cert-secret` - Load CA cert from Kubernetes Secret
-  - `keeper.security/ca-cert-configmap` - Load CA cert from ConfigMap
-  - Supports Zscaler, Palo Alto, Cisco Umbrella, and other SSL inspection tools
-  - Automatic cert pool integration for all HTTPS connections
-- **Go Template Support** - Industry-standard template rendering
-  - Custom secret formatting with Go templates
-  - 100+ Sprig template functions (date/time, crypto, string, encoding)
-  - Build connection strings without JSON parsing
+- Custom CA certificate support for corporate proxies (Zscaler, Palo Alto, Cisco Umbrella)
+  - `keeper.security/ca-cert-secret` annotation
+  - `keeper.security/ca-cert-configmap` annotation
+- Go template rendering for custom secret formatting
+  - 100+ Sprig template functions
+  - Connection string building
   - Conditional logic and default values
-  - Template functions: base64enc/dec, sha256sum, sha512sum, upper, lower, trim, and more
-- **Additional Secret Formats**
-  - Properties format (Java .properties files)
-  - YAML format
-  - INI format
-- **Template Examples** (examples/07-templates/)
-  - Connection string templates
-  - Properties file generation
-  - Shell script generation
-  - Conditional environment configs
-- **Documentation**
-  - docs/templates.md - Complete template guide with function reference
-  - docs/comparison.md - Feature comparison with Vault, ESO, AWS CSI, 1Password
-  - ROADMAP.md - Product roadmap and planned features
-  - Professional tone improvements across all documentation
-- **Development**
-  - CLAUDE.md updated with development rules and professional tone guidelines
-  - Feature request template
-
-### Changed
-
-- **BREAKING:** Minimum Kubernetes version: 1.25+ → 1.21+ (supports 4 more versions!)
-- Go 1.23.12 → 1.25.6 (latest stable)
-- Kubernetes libraries v0.32.0 → v0.34.3 (matches Vault & ESO)
-- controller-runtime v0.19.3 → v0.22.4 (latest)
+- Additional secret formats: properties, YAML, INI
+- Kubernetes support extended to 1.21+
+- Go 1.25.6 with latest libraries
 
 ### Security
 
-- **FIXED: All 15 vulnerabilities** (3 HIGH, 12 MEDIUM)
-- golang.org/x/oauth2 v0.25.0 → v0.27.0 (CVE-2025-22868)
-- golang.org/x/net v0.33.0 → v0.38.0 (CVE-2025-58183, CVE-2025-22870)
-- Go stdlib vulnerabilities fixed by Go 1.25.6 upgrade
-  - crypto/x509, net/http, encoding/asn1, encoding/pem, crypto/tls, net/url fixes
-
-### Fixed
-
-- Linter errors: unchecked error returns in Close(), Remove(), RemoveAll()
-- De Morgan's law optimization in UID validation
+- Fixed 13 of 15 vulnerabilities (golang.org/x/oauth2, golang.org/x/net, Go stdlib)
 
 ## [0.1.3] - 2026-01-15
 
