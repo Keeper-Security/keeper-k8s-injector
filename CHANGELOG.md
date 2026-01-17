@@ -5,7 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0] - 2026-01-16
+## [0.4.0] - 2026-01-17
+
+### Added
+
+- **Production-Grade Resilience** - Retry and caching for high availability
+  - Exponential backoff retry (3 attempts, 200ms-5s delays)
+  - In-memory secret caching (24-hour TTL)
+  - Graceful degradation when Keeper API unavailable
+  - Uses last known good values from cache
+  - Configurable via `keeper.security/fail-on-error` annotation
+
+- **Memory Security** (Matches Vault's Approach)
+  - Thread-safe in-memory cache (sync.RWMutex)
+  - No disk persistence (memory cleared on pod restart)
+  - Industry-standard approach (matches HashiCorp Vault)
+  - No cache encryption (standard practice, key management complexity)
+
+- **KSM Config Validation**
+  - Validates config format (JSON or base64)
+  - Checks for required fields (clientId)
+  - Prevents malformed configs from causing runtime failures
+
+### Testing
+
+- Retry package: 7 comprehensive tests (exponential backoff, context cancellation, timing)
+- Cache package: 8 comprehensive tests (TTL, concurrency, expiry, thread-safety)
+- All tests passing, linter clean
+
+
+## [0.3.0] - 2026-01-17
 
 ### Added
 

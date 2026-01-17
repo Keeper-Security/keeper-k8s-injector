@@ -5,10 +5,13 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/keeper-security/keeper-k8s-injector/pkg/sidecar"
@@ -141,6 +144,12 @@ func main() {
 			zap.Strings("supported", []string{"secret", "aws-secrets-manager", "gcp-secret-manager", "azure-key-vault"}))
 	}
 
+	// Validate KSM config format before use
+	if err := validateKSMConfig(ksmConfig); err != nil {
+		logger.Fatal("invalid KSM configuration", zap.Error(err))
+	}
+	logger.Debug("KSM configuration validated successfully")
+
 	// Convert to agent config
 	secrets := make([]sidecar.SecretConfig, len(cfg.Secrets))
 	for i, s := range cfg.Secrets {
@@ -234,6 +243,45 @@ func loadCustomCACert(logger *zap.Logger) error {
 	}
 
 	logger.Info("custom CA certificate loaded successfully")
+	return nil
+}
+
+// validateKSMConfig validates the KSM configuration format.
+// Accepts either base64-encoded or plain JSON config.
+// Returns error if config is invalid or missing required fields.
+func validateKSMConfig(config string) error {
+	if config == "" {
+		return fmt.Errorf("KSM config is empty")
+	}
+
+	trimmed := strings.TrimSpace(config)
+
+	// Try to parse as JSON first
+	var test map[string]interface{}
+	if err := json.Unmarshal([]byte(trimmed), &test); err == nil {
+		// Valid JSON - check for required fields
+		if _, ok := test["clientId"]; !ok {
+			return fmt.Errorf("KSM config missing clientId field")
+		}
+		return nil
+	}
+
+	// Not JSON - should be base64
+	decoded, err := base64.StdEncoding.DecodeString(trimmed)
+	if err != nil {
+		return fmt.Errorf("KSM config is neither valid JSON nor base64: %w", err)
+	}
+
+	// Parse decoded as JSON
+	if err := json.Unmarshal(decoded, &test); err != nil {
+		return fmt.Errorf("decoded KSM config is not valid JSON: %w", err)
+	}
+
+	// Check for required fields
+	if _, ok := test["clientId"]; !ok {
+		return fmt.Errorf("KSM config missing clientId field")
+	}
+
 	return nil
 }
 

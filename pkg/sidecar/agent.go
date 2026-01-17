@@ -64,13 +64,14 @@ type AgentConfig struct {
 
 // Agent manages secret fetching and rotation
 type Agent struct {
-	config    *AgentConfig
-	ksmClient *ksm.Client
-	logger    *zap.Logger
-	mu        sync.RWMutex
-	lastFetch map[string]time.Time
-	healthy   bool
-	ready     bool
+	config      *AgentConfig
+	ksmClient   *ksm.Client
+	logger      *zap.Logger
+	secretCache *cache.SecretCache
+	mu          sync.RWMutex
+	lastFetch   map[string]time.Time
+	healthy     bool
+	ready       bool
 }
 
 // NewAgent creates a new secrets agent
@@ -80,11 +81,12 @@ func NewAgent(cfg *AgentConfig) (*Agent, error) {
 	}
 
 	return &Agent{
-		config:    cfg,
-		logger:    cfg.Logger,
-		lastFetch: make(map[string]time.Time),
-		healthy:   true,
-		ready:     false,
+		config:      cfg,
+		logger:      cfg.Logger,
+		secretCache: cache.NewSecretCache(24 * time.Hour),
+		lastFetch:   make(map[string]time.Time),
+		healthy:     true,
+		ready:       false,
 	}, nil
 }
 
@@ -226,7 +228,8 @@ func (a *Agent) fetchAllSecrets(ctx context.Context) error {
 	return nil
 }
 
-// fetchSecret fetches a single secret and writes it to disk
+// fetchSecret fetches a single secret with retry and caching.
+// If Keeper API fails after retries, falls back to cached value (if available).
 func (a *Agent) fetchSecret(ctx context.Context, cfg SecretConfig) error {
 	a.logger.Debug("fetching secret",
 		zap.String("name", cfg.Name),
@@ -234,56 +237,84 @@ func (a *Agent) fetchSecret(ctx context.Context, cfg SecretConfig) error {
 		zap.String("notation", cfg.Notation),
 		zap.Bool("isFile", cfg.IsFile))
 
+	// Try to fetch with retry
 	var data []byte
-	var err error
+	err := retry.WithRetry(ctx, retry.DefaultConfig(), func() error {
+		var fetchErr error
 
-	// Handle different fetch modes
-	switch {
-	case cfg.Notation != "":
-		// Use Keeper notation for fetching
-		data, err = a.ksmClient.GetNotation(ctx, cfg.Notation)
-		if err != nil {
-			return fmt.Errorf("notation query failed: %w", err)
-		}
-
-	case cfg.IsFile:
-		// Fetch file attachment
-		data, err = a.ksmClient.GetFileContent(ctx, cfg.Name, cfg.FileName)
-		if err != nil {
-			return fmt.Errorf("failed to fetch file %s from %s: %w", cfg.FileName, cfg.Name, err)
-		}
-
-	case len(cfg.Fields) == 1:
-		// Single field extraction
-		data, err = a.ksmClient.GetSecretField(ctx, cfg.Name, cfg.Fields[0])
-		if err != nil {
-			return fmt.Errorf("failed to fetch field %s: %w", cfg.Fields[0], err)
-		}
-
-	default:
-		// Full record or multiple fields
-		secret, fetchErr := a.ksmClient.GetSecret(ctx, cfg.Name)
-		if fetchErr != nil {
-			return fetchErr
-		}
-
-		// Filter fields if specified
-		if len(cfg.Fields) > 0 {
-			filtered := make(map[string]interface{})
-			for _, f := range cfg.Fields {
-				if v, ok := secret.Fields[f]; ok {
-					filtered[f] = v
-				}
+		// Handle different fetch modes
+		switch {
+		case cfg.Notation != "":
+			data, fetchErr = a.ksmClient.GetNotation(ctx, cfg.Notation)
+			if fetchErr != nil {
+				return fmt.Errorf("notation query failed: %w", fetchErr)
 			}
-			data, err = formatSecret(filtered, cfg)
-		} else {
-			data, err = formatSecret(secret.Fields, cfg)
+
+		case cfg.IsFile:
+			data, fetchErr = a.ksmClient.GetFileContent(ctx, cfg.Name, cfg.FileName)
+			if fetchErr != nil {
+				return fmt.Errorf("failed to fetch file %s from %s: %w", cfg.FileName, cfg.Name, fetchErr)
+			}
+
+		case len(cfg.Fields) == 1:
+			data, fetchErr = a.ksmClient.GetSecretField(ctx, cfg.Name, cfg.Fields[0])
+			if fetchErr != nil {
+				return fmt.Errorf("failed to fetch field %s: %w", cfg.Fields[0], fetchErr)
+			}
+
+		default:
+			secret, fetchErr := a.ksmClient.GetSecret(ctx, cfg.Name)
+			if fetchErr != nil {
+				return fetchErr
+			}
+
+			// Filter fields if specified
+			if len(cfg.Fields) > 0 {
+				filtered := make(map[string]interface{})
+				for _, f := range cfg.Fields {
+					if v, ok := secret.Fields[f]; ok {
+						filtered[f] = v
+					}
+				}
+				data, fetchErr = formatSecret(filtered, cfg)
+			} else {
+				data, fetchErr = formatSecret(secret.Fields, cfg)
+			}
+
+			if fetchErr != nil {
+				return fmt.Errorf("failed to format secret: %w", fetchErr)
+			}
 		}
 
-		if err != nil {
-			return fmt.Errorf("failed to format secret: %w", err)
+		return nil
+	})
+
+	if err != nil {
+		// All retries failed - try cache
+		if cached, ok := a.secretCache.Get(cfg.Name); ok {
+			age := a.secretCache.Age(cfg.Name)
+			a.logger.Warn("using cached secret (Keeper API unavailable after retry)",
+				zap.String("secret", cfg.Name),
+				zap.Duration("cache_age", age),
+				zap.Error(err))
+
+			return a.writeSecretFile(cfg.Path, cached.Data)
 		}
+
+		// No cache available
+		if a.config.FailOnError {
+			return fmt.Errorf("Keeper API unavailable and no cached value: %w", err)
+		}
+
+		// Graceful degradation
+		a.logger.Error("secret unavailable, no cache, continuing with degraded state",
+			zap.String("secret", cfg.Name),
+			zap.Error(err))
+		return nil
 	}
+
+	// Success - cache the data
+	a.secretCache.Set(cfg.Name, data)
 
 	// Write to file
 	return a.writeSecretFile(cfg.Path, data)
