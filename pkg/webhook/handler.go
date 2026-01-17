@@ -439,6 +439,21 @@ func (m *PodMutator) buildSidecarConfig(cfg *config.InjectionConfig) map[string]
 		result["folders"] = folders
 	}
 
+	// Add cloud provider configuration if present
+	if cfg.AWSSecretID != "" {
+		result["awsSecretId"] = cfg.AWSSecretID
+		if cfg.AWSRegion != "" {
+			result["awsRegion"] = cfg.AWSRegion
+		}
+	}
+	if cfg.GCPSecretID != "" {
+		result["gcpSecretId"] = cfg.GCPSecretID
+	}
+	if cfg.AzureVaultName != "" && cfg.AzureSecretName != "" {
+		result["azureVaultName"] = cfg.AzureVaultName
+		result["azureSecretName"] = cfg.AzureSecretName
+	}
+
 	return result
 }
 

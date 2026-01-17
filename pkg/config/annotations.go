@@ -38,6 +38,13 @@ const (
 	AnnotationCACertConfigMap = AnnotationPrefix + "ca-cert-configmap"  // K8s ConfigMap name with CA cert
 	AnnotationCACertKey       = AnnotationPrefix + "ca-cert-key"        // Key in Secret/ConfigMap (default: "ca.crt")
 
+	// Cloud Secrets Provider annotations (AWS/GCP/Azure)
+	AnnotationAWSSecretID     = AnnotationPrefix + "aws-secret-id"      // AWS Secrets Manager secret ID
+	AnnotationAWSRegion       = AnnotationPrefix + "aws-region"         // AWS region (optional, auto-detect)
+	AnnotationGCPSecretID     = AnnotationPrefix + "gcp-secret-id"      // GCP Secret Manager resource name
+	AnnotationAzureVaultName  = AnnotationPrefix + "azure-vault-name"   // Azure Key Vault name
+	AnnotationAzureSecretName = AnnotationPrefix + "azure-secret-name"  // Azure secret name
+
 	// Default values
 	DefaultSecretsPath     = "/keeper/secrets"
 	DefaultRefreshInterval = "5m"
@@ -110,6 +117,13 @@ type InjectionConfig struct {
 	CACertKey string
 	// StrictLookup if true, fail on duplicate title matches
 	StrictLookup bool
+
+	// Cloud Secrets Provider configuration
+	AWSSecretID     string // AWS Secrets Manager secret ID/ARN
+	AWSRegion       string // AWS region
+	GCPSecretID     string // GCP Secret Manager resource name
+	AzureVaultName  string // Azure Key Vault name
+	AzureSecretName string // Azure Key Vault secret name
 }
 
 // ParseAnnotations extracts injection configuration from pod annotations
@@ -170,6 +184,23 @@ func ParseAnnotations(pod *corev1.Pod) (*InjectionConfig, error) {
 		config.CACertKey = caCertKey
 	} else {
 		config.CACertKey = "ca.crt" // Default key
+	}
+
+	// Parse cloud secrets provider configuration
+	if awsSecretID, ok := annotations[AnnotationAWSSecretID]; ok {
+		config.AWSSecretID = awsSecretID
+	}
+	if awsRegion, ok := annotations[AnnotationAWSRegion]; ok {
+		config.AWSRegion = awsRegion
+	}
+	if gcpSecretID, ok := annotations[AnnotationGCPSecretID]; ok {
+		config.GCPSecretID = gcpSecretID
+	}
+	if azureVaultName, ok := annotations[AnnotationAzureVaultName]; ok {
+		config.AzureVaultName = azureVaultName
+	}
+	if azureSecretName, ok := annotations[AnnotationAzureSecretName]; ok {
+		config.AzureSecretName = azureSecretName
 	}
 
 	// Parse secrets - Level 1: Single secret

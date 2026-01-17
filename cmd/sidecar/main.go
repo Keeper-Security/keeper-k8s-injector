@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/keeper-security/keeper-k8s-injector/pkg/sidecar"
+	"github.com/keeper-security/keeper-k8s-injector/pkg/sidecar/cloud"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -23,7 +24,14 @@ type secretsConfig struct {
 	FailOnError   bool          `json:"failOnError"`
 	StrictLookup  bool          `json:"strictLookup"`
 	RefreshSignal string        `json:"refreshSignal"`
-	AuthMethod    string        `json:"authMethod,omitempty"` // "secret" (default) or "oidc"
+	AuthMethod    string        `json:"authMethod,omitempty"` // "secret", "aws-secrets-manager", "gcp-secret-manager", "azure-key-vault"
+
+	// Cloud provider configuration
+	AWSSecretID     string `json:"awsSecretId,omitempty"`
+	AWSRegion       string `json:"awsRegion,omitempty"`
+	GCPSecretID     string `json:"gcpSecretId,omitempty"`
+	AzureVaultName  string `json:"azureVaultName,omitempty"`
+	AzureSecretName string `json:"azureSecretName,omitempty"`
 }
 
 type secretEntry struct {
@@ -79,10 +87,58 @@ func main() {
 		logger.Fatal("failed to parse KEEPER_CONFIG", zap.Error(err))
 	}
 
-	// Get KSM auth config
-	ksmConfig := os.Getenv("KEEPER_AUTH_CONFIG")
-	if ksmConfig == "" {
-		logger.Fatal("KEEPER_AUTH_CONFIG environment variable not set")
+	// Create context for cloud SDK calls
+	ctx := context.Background()
+
+	// Get KSM auth config from cloud provider or K8s Secret
+	var ksmConfig string
+	var err error
+
+	switch cfg.AuthMethod {
+	case "aws-secrets-manager":
+		logger.Info("fetching KSM config from AWS Secrets Manager",
+			zap.String("secretId", cfg.AWSSecretID),
+			zap.String("region", cfg.AWSRegion))
+
+		ksmConfig, err = cloud.FetchKSMConfigFromAWS(ctx, cfg.AWSSecretID, cfg.AWSRegion)
+		if err != nil {
+			logger.Fatal("failed to fetch KSM config from AWS", zap.Error(err))
+		}
+		logger.Info("successfully fetched KSM config from AWS Secrets Manager")
+
+	case "gcp-secret-manager":
+		logger.Info("fetching KSM config from GCP Secret Manager",
+			zap.String("secretId", cfg.GCPSecretID))
+
+		ksmConfig, err = cloud.FetchKSMConfigFromGCP(ctx, cfg.GCPSecretID)
+		if err != nil {
+			logger.Fatal("failed to fetch KSM config from GCP", zap.Error(err))
+		}
+		logger.Info("successfully fetched KSM config from GCP Secret Manager")
+
+	case "azure-key-vault":
+		logger.Info("fetching KSM config from Azure Key Vault",
+			zap.String("vaultName", cfg.AzureVaultName),
+			zap.String("secretName", cfg.AzureSecretName))
+
+		ksmConfig, err = cloud.FetchKSMConfigFromAzure(ctx, cfg.AzureVaultName, cfg.AzureSecretName)
+		if err != nil {
+			logger.Fatal("failed to fetch KSM config from Azure", zap.Error(err))
+		}
+		logger.Info("successfully fetched KSM config from Azure Key Vault")
+
+	case "secret", "":
+		// Default: read from K8s Secret via environment variable
+		ksmConfig = os.Getenv("KEEPER_AUTH_CONFIG")
+		if ksmConfig == "" {
+			logger.Fatal("KEEPER_AUTH_CONFIG environment variable not set")
+		}
+		logger.Debug("using KSM config from Kubernetes Secret")
+
+	default:
+		logger.Fatal("unknown auth method",
+			zap.String("authMethod", cfg.AuthMethod),
+			zap.Strings("supported", []string{"secret", "aws-secrets-manager", "gcp-secret-manager", "azure-key-vault"}))
 	}
 
 	// Convert to agent config
@@ -133,7 +189,6 @@ func main() {
 		logger.Fatal("failed to create agent", zap.Error(err))
 	}
 
-	ctx := context.Background()
 	if err := agent.Run(ctx); err != nil {
 		logger.Fatal("agent failed", zap.Error(err))
 	}

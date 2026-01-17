@@ -211,21 +211,51 @@ The sidecar automatically loads the CA cert and adds it to the system trust stor
 
 ## Authentication Methods
 
-### Method 1: Kubernetes Secret
+### Method 1: Kubernetes Secret (Default)
 
 ```yaml
 annotations:
   keeper.security/auth-secret: "keeper-credentials"
-  keeper.security/auth-method: "secret"  # default
+  keeper.security/auth-method: "secret"  # default, can be omitted
 ```
 
-### Method 2: OIDC (Planned)
+Works in any Kubernetes cluster.
+
+### Method 2: AWS Secrets Manager (EKS with IRSA)
 
 ```yaml
 annotations:
-  keeper.security/auth-method: "oidc"
-  keeper.security/service-account: "my-app-sa"
+  keeper.security/auth-method: "aws-secrets-manager"
+  keeper.security/aws-secret-id: "prod/keeper/ksm-config"
+  keeper.security/aws-region: "us-west-2"
 ```
+
+Requires EKS cluster with OIDC and ServiceAccount with IAM role annotation.
+
+**Security benefit:** No KSM config stored in Kubernetes cluster.
+
+### Method 3: GCP Secret Manager (GKE with Workload Identity)
+
+```yaml
+annotations:
+  keeper.security/auth-method: "gcp-secret-manager"
+  keeper.security/gcp-secret-id: "projects/PROJECT/secrets/ksm-config/versions/latest"
+```
+
+Requires GKE with Workload Identity and ServiceAccount with GCP SA annotation.
+
+### Method 4: Azure Key Vault (AKS with Workload Identity)
+
+```yaml
+annotations:
+  keeper.security/auth-method: "azure-key-vault"
+  keeper.security/azure-vault-name: "mykeyvault"
+  keeper.security/azure-secret-name: "ksm-config"
+```
+
+Requires AKS with Workload Identity and ServiceAccount with Azure client-id annotation.
+
+See [Cloud Secrets Guide](cloud-secrets.md) for detailed setup instructions.
 
 ---
 

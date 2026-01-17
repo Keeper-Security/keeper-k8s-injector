@@ -112,10 +112,69 @@ Templates support 100+ functions from [Sprig](http://masterminds.github.io/sprig
 
 ## Authentication Annotations
 
+### Basic Authentication (K8s Secret)
+
 | Annotation | Default | Description |
 |------------|---------|-------------|
 | `keeper.security/auth-secret` | Required | K8s secret name with KSM config |
-| `keeper.security/auth-method` | `"secret"` | Auth method: `"secret"` or `"oidc"` |
+| `keeper.security/auth-method` | `"secret"` | Auth method (see below) |
+
+### Cloud Provider Authentication
+
+| Auth Method | Description | Cloud |
+|-------------|-------------|-------|
+| `"secret"` | K8s Secret (default) | Any |
+| `"aws-secrets-manager"` | AWS Secrets Manager via IRSA | EKS |
+| `"gcp-secret-manager"` | GCP Secret Manager via Workload Identity | GKE |
+| `"azure-key-vault"` | Azure Key Vault via Workload Identity | AKS |
+
+### AWS Secrets Manager Annotations
+
+| Annotation | Description | Example |
+|------------|-------------|---------|
+| `keeper.security/aws-secret-id` | AWS Secrets Manager secret ID or ARN | `"prod/keeper/ksm-config"` |
+| `keeper.security/aws-region` | AWS region (optional, auto-detect) | `"us-west-2"` |
+
+**Example:**
+```yaml
+annotations:
+  keeper.security/inject: "true"
+  keeper.security/auth-method: "aws-secrets-manager"
+  keeper.security/aws-secret-id: "prod/keeper/ksm-config"
+  keeper.security/aws-region: "us-west-2"
+```
+
+### GCP Secret Manager Annotations
+
+| Annotation | Description | Example |
+|------------|-------------|---------|
+| `keeper.security/gcp-secret-id` | GCP Secret Manager resource name | `"projects/my-project/secrets/ksm-config/versions/latest"` |
+
+**Example:**
+```yaml
+annotations:
+  keeper.security/inject: "true"
+  keeper.security/auth-method: "gcp-secret-manager"
+  keeper.security/gcp-secret-id: "projects/my-project/secrets/ksm-config/versions/latest"
+```
+
+### Azure Key Vault Annotations
+
+| Annotation | Description | Example |
+|------------|-------------|---------|
+| `keeper.security/azure-vault-name` | Azure Key Vault name | `"mykeyvault"` |
+| `keeper.security/azure-secret-name` | Secret name in Key Vault | `"ksm-config"` |
+
+**Example:**
+```yaml
+annotations:
+  keeper.security/inject: "true"
+  keeper.security/auth-method: "azure-key-vault"
+  keeper.security/azure-vault-name: "mykeyvault"
+  keeper.security/azure-secret-name: "ksm-config"
+```
+
+See [Cloud Secrets Guide](cloud-secrets.md) for complete setup instructions.
 
 ## CA Certificate Annotations (Corporate Proxies)
 
