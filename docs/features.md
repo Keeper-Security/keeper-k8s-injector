@@ -176,6 +176,39 @@ Only fetches secrets once at pod startup, no sidecar.
 
 ---
 
+## Resilience Features
+
+### Retry with Exponential Backoff
+
+Automatic retry on transient failures:
+- 3 attempts
+- Delays: 200ms, 400ms, 800ms (exponential)
+- Respects context cancellation
+
+### In-Memory Secret Caching
+
+Secrets cached after successful fetch:
+- 24-hour maximum age
+- Thread-safe concurrent access
+- Cleared on pod restart
+- Memory-only (no disk persistence)
+
+### Cache Fallback
+
+When Keeper API is unavailable after retry:
+```yaml
+keeper.security/fail-on-error: "true"   # Fail if no cache (default)
+keeper.security/fail-on-error: "false"  # Use cache, or start without secrets
+```
+
+**Behavior:**
+- Keeper up → Fetch and cache
+- Keeper down, cache exists → Use cached value (warn in logs)
+- Keeper down, no cache + fail-on-error=true → Pod fails
+- Keeper down, no cache + fail-on-error=false → Pod starts, no secrets
+
+---
+
 ## Corporate Proxy Support
 
 ### Custom CA Certificate

@@ -1,0 +1,58 @@
+# Example deployment using GCP Secret Manager for KSM config
+#
+# Prerequisites:
+#   1. KSM config stored in GCP Secret Manager
+#   2. GCP service account with Secret Manager access
+#   3. Workload Identity binding configured
+#   4. K8s ServiceAccount created with iam.gke.io annotation
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gcp-secrets-example
+  labels:
+    app: gcp-secrets-example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gcp-secrets-example
+  template:
+    metadata:
+      labels:
+        app: gcp-secrets-example
+      annotations:
+        # Enable Keeper injection
+        keeper.security/inject: "true"
+
+        # Use GCP Secret Manager for KSM config
+        keeper.security/auth-method: "gcp-secret-manager"
+        keeper.security/gcp-secret-id: "projects/PROJECT_ID/secrets/ksm-config/versions/latest"
+
+        # Secret to inject
+        keeper.security/secret: "demo-secret"
+        keeper.security/refresh-interval: "5m"
+    spec:
+      # Use ServiceAccount with Workload Identity
+      serviceAccountName: myapp-sa
+
+      containers:
+      - name: app
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Keeper K8s Injector - GCP Secret Manager Example"
+          echo "KSM config fetched from GCP Secret Manager using Workload Identity"
+
+          while [ ! -f /keeper/secrets/demo-secret.json ]; do
+            echo "Waiting for secret injection..."
+            sleep 2
+          done
+
+          echo "Secret injected successfully!"
+          ls -lah /keeper/secrets/
+          tail -f /dev/null

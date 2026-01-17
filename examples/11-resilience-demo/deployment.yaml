@@ -1,0 +1,54 @@
+# Resilience demonstration deployment
+#
+# Shows retry, caching, and graceful degradation
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: resilience-demo
+  labels:
+    app: resilience-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: resilience-demo
+  template:
+    metadata:
+      labels:
+        app: resilience-demo
+      annotations:
+        # Enable Keeper injection
+        keeper.security/inject: "true"
+        keeper.security/auth-secret: "keeper-credentials"
+
+        # Secret to inject
+        keeper.security/secret: "demo-secret"
+
+        # Enable graceful degradation
+        keeper.security/fail-on-error: "false"
+
+        # Frequent refresh for demo
+        keeper.security/refresh-interval: "30s"
+    spec:
+      containers:
+      - name: app
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Resilience Demo - Keeper K8s Injector"
+          echo ""
+
+          while true; do
+            if [ -f /keeper/secrets/demo-secret.json ]; then
+              TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+              echo "[$TIMESTAMP] Secret exists: /keeper/secrets/demo-secret.json"
+            else
+              echo "[$TIMESTAMP] Waiting for secret..."
+            fi
+            sleep 10
+          done
