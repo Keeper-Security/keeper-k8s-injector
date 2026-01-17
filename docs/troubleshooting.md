@@ -18,7 +18,7 @@ Namespaces with `keeper.security/inject=disabled` are excluded.
 
 **Check 3: Is the webhook running?**
 ```bash
-kubectl get pods -n keeper-system
+kubectl get pods -n keeper-security
 ```
 
 **Check 4: Check init container logs**
@@ -118,18 +118,18 @@ kubectl get pods -n cert-manager
 ```
 2. Check certificate status:
 ```bash
-kubectl get certificate -n keeper-system
+kubectl get certificate -n keeper-security
 ```
 3. Restart webhook pods after certificate renewal:
 ```bash
-kubectl rollout restart deployment -n keeper-system keeper-injector
+kubectl rollout restart deployment -n keeper-security keeper-injector
 ```
 
 ## Debugging Commands
 
 ### View all injector resources
 ```bash
-kubectl get all -n keeper-system
+kubectl get all -n keeper-security
 ```
 
 ### Check webhook configuration
@@ -140,7 +140,7 @@ kubectl get mutatingwebhookconfiguration keeper-injector -o yaml
 ### Test webhook connectivity
 ```bash
 kubectl run test --image=curlimages/curl --rm -it --restart=Never -- \
-  curl -k https://keeper-injector-webhook.keeper-system:443/healthz
+  curl -k https://keeper-injector-webhook.keeper-security:443/healthz
 ```
 
 ### View injection for a specific pod
@@ -161,7 +161,7 @@ kubectl get events --field-selector reason=FailedCreate
 
 When reporting issues, include:
 - Kubernetes version: `kubectl version`
-- Injector version: `kubectl get deployment -n keeper-system keeper-injector -o jsonpath='{.spec.template.spec.containers[0].image}'`
+- Injector version: `kubectl get deployment -n keeper-security keeper-injector -o jsonpath='{.spec.template.spec.containers[0].image}'`
 - Pod annotations
 - Init container and sidecar logs
 - Events: `kubectl get events -n <namespace>`

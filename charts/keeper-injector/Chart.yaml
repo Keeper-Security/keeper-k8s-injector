@@ -2,8 +2,8 @@ apiVersion: v2
 name: keeper-injector
 description: Keeper Secrets Manager Kubernetes Injector - Inject secrets into pods at runtime
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 0.5.0
+appVersion: "0.5.0"
 kubeVersion: ">=1.21.0-0"
 home: https://www.keepersecurity.com
 icon: https://keepersecurity.com/vault/images/keeper_icons/icon_rounded_256.png
@@ -26,3 +26,26 @@ annotations:
   artifacthub.io/license: MIT
   artifacthub.io/operator: "false"
   artifacthub.io/prerelease: "true"
+  artifacthub.io/links: |
+    - name: Documentation
+      url: https://docs.keeper.io/secrets-manager/
+    - name: Examples
+      url: https://github.com/Keeper-Security/keeper-k8s-injector/tree/main/examples
+    - name: Support
+      url: https://github.com/Keeper-Security/keeper-k8s-injector/issues
+  artifacthub.io/changes: |
+    - kind: added
+      description: Helm chart now automatically labels the installation namespace with keeper.security/inject=disabled to prevent webhook self-injection
+      links:
+        - name: GitHub Issue
+          url: https://github.com/Keeper-Security/keeper-k8s-injector/issues/1
+    - kind: added
+      description: Added namespaceManagement configuration section in values.yaml for namespace creation and labeling
+    - kind: added
+      description: Added NOTES.txt template to display post-installation information
+    - kind: changed
+      description: Changed default namespace from keeper-system to keeper-security throughout documentation
+    - kind: fixed
+      description: Fixed chicken-and-egg problem where webhook would try to intercept its own pod creation, preventing installation
+    - kind: fixed
+      description: Helm chart now creates namespace with proper labels to avoid connection refused webhook errors during initial deployment

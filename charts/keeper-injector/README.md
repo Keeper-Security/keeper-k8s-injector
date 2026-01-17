@@ -20,7 +20,7 @@ Automatically inject secrets from [Keeper Secrets Manager](https://www.keepersec
 
 ```bash
 helm upgrade --install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
-  --namespace keeper-system \
+  --namespace keeper-security \
   --create-namespace
 ```
 
@@ -29,7 +29,7 @@ helm upgrade --install keeper-injector oci://registry-1.docker.io/keeper/keeper-
 ```bash
 helm repo add keeper https://keeper-security.github.io/keeper-k8s-injector
 helm upgrade --install keeper-injector keeper/keeper-injector \
-  --namespace keeper-system \
+  --namespace keeper-security \
   --create-namespace
 ```
 
@@ -37,7 +37,7 @@ helm upgrade --install keeper-injector keeper/keeper-injector \
 
 ```bash
 helm upgrade --install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
-  --namespace keeper-system \
+  --namespace keeper-security \
   --create-namespace \
   --set replicaCount=3 \
   --set metrics.enabled=true
@@ -163,6 +163,33 @@ Try these working examples:
 
 - [GitHub Issues](https://github.com/Keeper-Security/keeper-k8s-injector/issues)
 - [Keeper Support](https://www.keepersecurity.com/support.html)
+
+## Maintainers
+
+### Updating the Changelog for ArtifactHub
+
+When releasing a new chart version, update the `artifacthub.io/changes` annotation in `Chart.yaml`:
+
+1. Only include changes for the **current version**, not all previous versions
+2. Use structured format with `kind` and `description`
+3. Valid kinds: `added`, `changed`, `deprecated`, `removed`, `fixed`, `security`
+4. Optionally add links to GitHub issues or PRs for traceability
+
+Example:
+```yaml
+artifacthub.io/changes: |
+  - kind: fixed
+    description: Fixed connection refused error during initial installation
+    links:
+      - name: GitHub Issue
+        url: https://github.com/Keeper-Security/keeper-k8s-injector/issues/1
+  - kind: added
+    description: Added automatic namespace labeling to prevent webhook self-injection
+```
+
+See `CHANGELOG-TEMPLATE.yaml` in this directory for a complete template.
+
+**Important**: ArtifactHub generates the full changelog by combining the changes from all chart versions. Each version should only describe its own changes.
 
 ## License
 

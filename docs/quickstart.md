@@ -28,7 +28,7 @@ kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manage
 
 ```bash
 helm upgrade --install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
-  --namespace keeper-system \
+  --namespace keeper-security \
   --create-namespace
 ```
 
@@ -38,7 +38,7 @@ helm upgrade --install keeper-injector oci://registry-1.docker.io/keeper/keeper-
 helm repo add keeper https://keeper-security.github.io/keeper-k8s-injector
 helm repo update
 helm upgrade --install keeper-injector keeper/keeper-injector \
-  --namespace keeper-system \
+  --namespace keeper-security \
   --create-namespace
 ```
 
@@ -51,7 +51,7 @@ kubectl apply -f https://github.com/Keeper-Security/keeper-k8s-injector/releases
 Verify installation:
 
 ```bash
-kubectl get pods -n keeper-system
+kubectl get pods -n keeper-security
 ```
 
 You should see the webhook pods running:

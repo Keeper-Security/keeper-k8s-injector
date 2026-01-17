@@ -31,6 +31,17 @@ nameOverride: ""
 # -- Override full name
 fullnameOverride: ""
 
+# Namespace management
+namespaceManagement:
+  # -- Create namespace (set to false if namespace already exists)
+  createNamespace: true
+  # -- Label namespace to prevent self-injection
+  labelNamespace: true
+  # -- Additional labels for the namespace
+  additionalLabels: {}
+  # -- Annotations for the namespace
+  annotations: {}
+
 # Service account configuration
 serviceAccount:
   # -- Create service account

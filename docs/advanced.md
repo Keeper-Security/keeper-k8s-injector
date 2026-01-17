@@ -213,7 +213,7 @@ spec:
 ### Webhook Logs
 
 ```bash
-kubectl logs -n keeper-system -l app.kubernetes.io/name=keeper-injector
+kubectl logs -n keeper-security -l app.kubernetes.io/name=keeper-injector
 ```
 
 ### Sidecar Logs

@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-01-17
+
+### Added
+
+- Helm chart now automatically labels the installation namespace with `keeper.security/inject=disabled` to prevent webhook self-injection
+- Added `namespaceManagement` configuration section in values.yaml for namespace creation and labeling
+- Added NOTES.txt template to display post-installation information
+- Added `artifacthub.io/changes` annotation to Chart.yaml to enable changelog display on ArtifactHub
+- Added `artifacthub.io/links` annotation with documentation, examples, and support links
+- Added CHANGELOG-TEMPLATE.yaml for future release changelog updates
+
+### Changed
+
+- Changed default namespace from `keeper-system` to `keeper-security` throughout documentation
+- Updated Example 01 troubleshooting section with webhook self-injection fix
+
+### Fixed
+
+- Fixed chicken-and-egg problem where webhook would try to intercept its own pod creation, preventing installation
+- Helm chart now creates namespace with proper labels to avoid "connection refused" webhook errors during initial deployment
+- Fixed ArtifactHub changelog display by adding proper annotations to Chart.yaml
+
+### Documentation
+
+- Added maintainer documentation for updating ArtifactHub changelog in future releases
+- Chart README now includes instructions for maintaining the `artifacthub.io/changes` annotation
+
 ## [0.4.1] - 2026-01-17
 
 ### Fixed

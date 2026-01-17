@@ -6,7 +6,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: keeper-system
+  name: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
 ---
@@ -15,7 +15,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: keeper-injector
-  namespace: keeper-system
+  namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
     app.kubernetes.io/version: "0.1.0"
@@ -30,7 +30,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: keeper-injector
-  namespace: keeper-system
+  namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
     app.kubernetes.io/version: "0.1.0"
@@ -40,7 +40,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: keeper-injector-config
-  namespace: keeper-system
+  namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
     app.kubernetes.io/version: "0.1.0"
@@ -86,14 +86,14 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: keeper-injector
-    namespace: keeper-system
+    namespace: keeper-security
 ---
 # Source: keeper-injector/templates/service.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: keeper-injector-webhook
-  namespace: keeper-system
+  namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
     app.kubernetes.io/version: "0.1.0"
@@ -112,7 +112,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: keeper-injector-metrics
-  namespace: keeper-system
+  namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
     app.kubernetes.io/version: "0.1.0"
@@ -131,7 +131,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: keeper-injector
-  namespace: keeper-system
+  namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
     app.kubernetes.io/version: "0.1.0"
@@ -215,14 +215,14 @@ metadata:
     app.kubernetes.io/name: keeper-injector
     app.kubernetes.io/version: "0.1.0"
   annotations:
-    cert-manager.io/inject-ca-from: keeper-system/keeper-injector-tls
+    cert-manager.io/inject-ca-from: keeper-security/keeper-injector-tls
 webhooks:
   - name: pods.keeper.security
     admissionReviewVersions: [v1]
     clientConfig:
       service:
         name: keeper-injector-webhook
-        namespace: keeper-system
+        namespace: keeper-security
         path: /mutate-pods
         port: 443
     failurePolicy: Fail
@@ -247,7 +247,7 @@ apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: keeper-injector-issuer
-  namespace: keeper-system
+  namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
     app.kubernetes.io/version: "0.1.0"
@@ -259,7 +259,7 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: keeper-injector-tls
-  namespace: keeper-system
+  namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
     app.kubernetes.io/version: "0.1.0"
@@ -278,9 +278,9 @@ spec:
     - server auth
   dnsNames:
     - keeper-injector-webhook
-    - keeper-injector-webhook.keeper-system
-    - keeper-injector-webhook.keeper-system.svc
-    - keeper-injector-webhook.keeper-system.svc.cluster.local
+    - keeper-injector-webhook.keeper-security
+    - keeper-injector-webhook.keeper-security.svc
+    - keeper-injector-webhook.keeper-security.svc.cluster.local
   issuerRef:
     name: keeper-injector-issuer
     kind: Issuer

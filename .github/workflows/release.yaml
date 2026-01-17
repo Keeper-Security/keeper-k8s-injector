@@ -132,7 +132,7 @@ jobs:
       - name: Generate install manifest
         run: |
           helm template keeper-injector charts/keeper-injector \
-            --namespace keeper-system \
+            --namespace keeper-security \
             --set image.tag=${{ steps.version.outputs.VERSION }} \
             --set sidecar.tag=${{ steps.version.outputs.VERSION }} \
             > deploy/install.yaml

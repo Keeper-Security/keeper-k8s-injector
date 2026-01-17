@@ -39,7 +39,7 @@ kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manage
 
 ```bash
 helm upgrade --install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
-  --namespace keeper-system \
+  --namespace keeper-security \
   --create-namespace
 ```
 
@@ -51,7 +51,7 @@ kubectl apply -f https://github.com/Keeper-Security/keeper-k8s-injector/releases
 
 Verify installation:
 ```bash
-kubectl get pods -n keeper-system
+kubectl get pods -n keeper-security
 
 # Expected output:
 # NAME                                      READY   STATUS    RESTARTS   AGE
@@ -59,12 +59,23 @@ kubectl get pods -n keeper-system
 # keeper-injector-webhook-xxxxx-yyy         1/1     Running   0          30s
 ```
 
-**Troubleshooting:** If you get "invalid ownership metadata" error, you have an old installation:
+**Troubleshooting:**
+
+If you get "invalid ownership metadata" error, you have an old installation:
 ```bash
-helm uninstall keeper-injector -n keeper-system
-kubectl delete pdb keeper-injector -n keeper-system
+helm uninstall keeper-injector -n keeper-security
+kubectl delete pdb keeper-injector -n keeper-security
 # Then run the install command again
 ```
+
+If pods won't start with "connection refused" webhook errors:
+```bash
+# Label the namespace to prevent webhook self-injection
+kubectl label namespace keeper-security keeper.security/inject=disabled
+kubectl rollout restart deployment keeper-injector -n keeper-security
+```
+
+**Note:** The Helm chart (v0.5.0+) automatically labels the namespace to prevent this issue.
 
 ### Step 3: Create KSM Auth Secret
 
@@ -182,7 +193,7 @@ kubectl delete -f .
 
 2. Ensure the injector webhook is running:
    ```bash
-   kubectl get pods -n keeper-system
+   kubectl get pods -n keeper-security
    ```
 
 ## Next Steps
