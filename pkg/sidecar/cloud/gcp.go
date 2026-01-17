@@ -3,6 +3,7 @@ package cloud
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
@@ -21,6 +22,15 @@ import (
 //
 // Returns base64-encoded KSM configuration string.
 func FetchKSMConfigFromGCP(ctx context.Context, secretID string) (string, error) {
+	// Validation
+	if secretID == "" {
+		return "", fmt.Errorf("GCP secret ID cannot be empty")
+	}
+
+	// Validate format: must start with "projects/"
+	if !strings.HasPrefix(secretID, "projects/") {
+		return "", fmt.Errorf("invalid GCP secret ID format, must start with 'projects/', got: %s", secretID)
+	}
 	// Create Secret Manager client
 	// Automatically uses Workload Identity credentials
 	client, err := secretmanager.NewClient(ctx)

@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-01-16
+
+### Added
+
+- **Cloud Secrets Provider Authentication** - Store KSM config in cloud instead of K8s Secrets
+  - AWS Secrets Manager via IRSA (IAM Roles for Service Accounts)
+  - GCP Secret Manager via Workload Identity
+  - Azure Key Vault via Workload Identity
+  - No static credentials in Kubernetes cluster
+  - CloudTrail/Cloud Logging audit trails
+  - Backward compatible (K8s Secret auth still default)
+
+### Documentation
+
+- docs/cloud-secrets.md - Complete setup guide for AWS/GCP/Azure
+- examples/08-aws-secrets-manager/ - AWS IRSA example with IAM setup
+- Updated docs/annotations.md with cloud provider annotations
+- Updated docs/features.md with authentication methods comparison
+
+### Testing
+
+- Comprehensive unit tests for cloud provider integrations
+- Input validation for all cloud secret references
+- Linter clean (0 issues)
+
+### Dependencies
+
+- github.com/aws/aws-sdk-go-v2/service/secretsmanager - AWS integration
+- cloud.google.com/go/secretmanager - GCP integration
+- github.com/Azure/azure-sdk-for-go/sdk/keyvault/azsecrets - Azure integration
+
 ## [0.2.0] - 2026-01-16
 
 ### Added

@@ -20,6 +20,19 @@ import (
 //
 // Returns base64-encoded KSM configuration string.
 func FetchKSMConfigFromAzure(ctx context.Context, vaultName, secretName string) (string, error) {
+	// Validation
+	if vaultName == "" {
+		return "", fmt.Errorf("azure vault name cannot be empty")
+	}
+	if secretName == "" {
+		return "", fmt.Errorf("azure secret name cannot be empty")
+	}
+
+	// Validate vault name format (prevent SSRF)
+	// Vault names must be 3-24 chars, alphanumeric and hyphens only
+	if len(vaultName) < 3 || len(vaultName) > 24 {
+		return "", fmt.Errorf("invalid vault name length: %d (must be 3-24 characters)", len(vaultName))
+	}
 	// Create Azure credential
 	// Automatically uses Workload Identity from environment variables:
 	// - AZURE_CLIENT_ID

@@ -21,6 +21,10 @@ import (
 //
 // Returns base64-encoded KSM configuration string.
 func FetchKSMConfigFromAWS(ctx context.Context, secretID, region string) (string, error) {
+	// Validation
+	if secretID == "" {
+		return "", fmt.Errorf("AWS secret ID cannot be empty")
+	}
 	// Load AWS SDK configuration
 	// Automatically uses IRSA credentials from environment variables:
 	// - AWS_ROLE_ARN
