@@ -12,50 +12,80 @@ The simplest possible demo of Keeper K8s Injector. A web page that displays your
 
 ## Prerequisites
 
-1. cert-manager installed (see [Quick Start](../../docs/quickstart.md#step-0-install-cert-manager-if-not-already-installed))
-2. Keeper K8s Injector installed in your cluster
-3. A Keeper Secrets Manager application with a config file
+- Kubernetes cluster (minikube, kind, EKS, GKE, AKS, or any K8s 1.21+)
+- kubectl configured
+- Keeper Secrets Manager account
 
-## Quick Start
+## Complete Setup (From Zero)
 
-### 1. Create Your KSM Auth Secret
+### Step 1: Install cert-manager
 
-**Option 1: Base64 Config**
+```bash
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.1/cert-manager.yaml
 
-From Keeper: Vault → Secrets Manager → Select Application → Devices → Add Device → Base64
+# Wait for ready
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout=120s
+```
+
+### Step 2: Install Keeper K8s Injector
+
+**Option A: Helm (recommended)**
+
+```bash
+helm install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
+  --namespace keeper-system \
+  --create-namespace
+```
+
+**Option B: kubectl**
+
+```bash
+kubectl apply -f https://github.com/Keeper-Security/keeper-k8s-injector/releases/latest/download/install.yaml
+```
+
+Verify installation:
+```bash
+kubectl get pods -n keeper-system
+```
+
+### Step 3: Create KSM Auth Secret
+
+Get your KSM config from Keeper:
+1. Log into Keeper Vault
+2. Navigate to: Vault → Secrets Manager → Select your Application
+3. Go to Devices tab → Add Device
+4. Select "Configuration File" method and "Base64" type
+5. Copy the base64 string
 
 ```bash
 kubectl create secret generic keeper-credentials \
   --from-literal=config='<paste-base64-config-here>'
 ```
 
-**Option 2: Config File**
-
-```bash
-kubectl create secret generic keeper-credentials \
-  --from-file=config=ksm-config.json
-```
-
-### 2. Create a Secret in Keeper
+### Step 4: Create a Secret in Keeper
 
 In your Keeper vault:
-1. Create a new record titled **"demo-secret"** (or update `deployment.yaml`)
-2. Add any fields you want (password, notes, custom fields)
-3. Save the record
+1. Create a new record
+2. Set the title to exactly: **demo-secret**
+3. Add a password field with any value (e.g., "hello-world-123")
+4. Save the record
 
-### 3. Deploy the Example
+**Important:** The title must be exactly "demo-secret" for this tutorial.
+
+### Step 5: Deploy the Example
 
 ```bash
-kubectl apply -f .
+kubectl apply -f https://raw.githubusercontent.com/Keeper-Security/keeper-k8s-injector/main/examples/01-hello-secrets/deployment.yaml
+kubectl apply -f https://raw.githubusercontent.com/Keeper-Security/keeper-k8s-injector/main/examples/01-hello-secrets/service.yaml
 ```
 
-### 4. Wait for Ready
+### Step 6: Wait for Ready
 
 ```bash
 kubectl wait --for=condition=ready pod -l app=hello-secrets --timeout=120s
 ```
 
-### 5. View the Demo
+### Step 7: View the Demo
 
 ```bash
 kubectl port-forward svc/hello-secrets 8080:80

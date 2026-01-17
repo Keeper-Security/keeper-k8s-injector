@@ -13,8 +13,8 @@ A real-world example showing how to inject database credentials from Keeper into
 
 ## Prerequisites
 
-1. Keeper K8s Injector installed in your cluster
-2. A Keeper Secrets Manager application with a config file
+- Keeper K8s Injector installed (see [Example 01 - Hello Secrets](../01-hello-secrets/) for complete installation)
+- Keeper Secrets Manager application configured
 
 ## Quick Start
 
