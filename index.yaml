@@ -3,12 +3,68 @@ entries:
   keeper-injector:
   - annotations:
       artifacthub.io/category: security
+      artifacthub.io/changes: |
+        - kind: added
+          description: Helm chart now automatically labels the installation namespace with keeper.security/inject=disabled to prevent webhook self-injection
+          links:
+            - name: GitHub Issue
+              url: https://github.com/Keeper-Security/keeper-k8s-injector/issues/1
+        - kind: added
+          description: Added namespaceManagement configuration section in values.yaml for namespace creation and labeling
+        - kind: added
+          description: Added NOTES.txt template to display post-installation information
+        - kind: changed
+          description: Changed default namespace from keeper-system to keeper-security throughout documentation
+        - kind: fixed
+          description: Fixed chicken-and-egg problem where webhook would try to intercept its own pod creation, preventing installation
+        - kind: fixed
+          description: Helm chart now creates namespace with proper labels to avoid connection refused webhook errors during initial deployment
+      artifacthub.io/license: MIT
+      artifacthub.io/links: |
+        - name: Documentation
+          url: https://docs.keeper.io/secrets-manager/
+        - name: Examples
+          url: https://github.com/Keeper-Security/keeper-k8s-injector/tree/main/examples
+        - name: Support
+          url: https://github.com/Keeper-Security/keeper-k8s-injector/issues
+      artifacthub.io/operator: "false"
+      artifacthub.io/prerelease: "true"
+    apiVersion: v2
+    appVersion: 0.5.0
+    created: "2026-01-17T18:38:22.844433525Z"
+    description: Keeper Secrets Manager Kubernetes Injector - Inject secrets into
+      pods at runtime
+    digest: 35f915024144eee49d0f512dbb7d755f2df5382901c133336d5ea6af7911df32
+    home: https://www.keepersecurity.com
+    icon: https://keepersecurity.com/vault/images/keeper_icons/icon_rounded_256.png
+    keywords:
+    - keeper
+    - secrets
+    - secrets-management
+    - kubernetes
+    - injection
+    - sidecar
+    - security
+    kubeVersion: '>=1.21.0-0'
+    maintainers:
+    - email: pam@keepersecurity.com
+      name: Keeper Security
+      url: https://www.keepersecurity.com
+    name: keeper-injector
+    sources:
+    - https://github.com/keeper-security/keeper-k8s-injector
+    type: application
+    urls:
+    - https://keeper-security.github.io/keeper-k8s-injector/keeper-injector-0.5.0.tgz
+    version: 0.5.0
+  - annotations:
+      artifacthub.io/category: security
       artifacthub.io/license: MIT
       artifacthub.io/operator: "false"
       artifacthub.io/prerelease: "true"
     apiVersion: v2
     appVersion: 0.4.0
-    created: "2026-01-17T08:48:28.15354791Z"
+    created: "2026-01-17T18:38:22.842908209Z"
     description: Keeper Secrets Manager Kubernetes Injector - Inject secrets into
       pods at runtime
     digest: 1756d95d9606a628407d7c868aebf6fc547f31ee37d5beebd626be52a7ce915c
@@ -41,7 +97,7 @@ entries:
       artifacthub.io/prerelease: "true"
     apiVersion: v2
     appVersion: 0.3.0
-    created: "2026-01-17T08:48:28.152358995Z"
+    created: "2026-01-17T18:38:22.842286121Z"
     description: Keeper Secrets Manager Kubernetes Injector - Inject secrets into
       pods at runtime
     digest: 4880d5f3288b3d82de6a1d30f744d83671d899eb437ca696fe689306e337a1bb
@@ -74,7 +130,7 @@ entries:
       artifacthub.io/prerelease: "true"
     apiVersion: v2
     appVersion: 0.2.0
-    created: "2026-01-17T08:48:28.150659547Z"
+    created: "2026-01-17T18:38:22.841667421Z"
     description: Keeper Secrets Manager Kubernetes Injector - Inject secrets into
       pods at runtime
     digest: 33431805b3b3afea9a9b9108ba426ff8b389634400fd8302fe063495d779b0c6
@@ -107,7 +163,7 @@ entries:
       artifacthub.io/prerelease: "true"
     apiVersion: v2
     appVersion: 0.1.3
-    created: "2026-01-17T08:48:28.149848279Z"
+    created: "2026-01-17T18:38:22.841062786Z"
     description: Keeper Secrets Manager Kubernetes Injector - Inject secrets into
       pods at runtime
     digest: 4a3bd23875d1c50cf05987e8992afc030fa767435b5e08a940941fba3c52dc9e
@@ -140,7 +196,7 @@ entries:
       artifacthub.io/prerelease: "true"
     apiVersion: v2
     appVersion: 0.1.2
-    created: "2026-01-17T08:48:28.149194575Z"
+    created: "2026-01-17T18:38:22.840424149Z"
     description: Keeper Secrets Manager Kubernetes Injector - Inject secrets into
       pods at runtime
     digest: 0e0ed9e01e652b36bf773525335f8e450bc8632ec1c87df8804a8b3744bf2d94
@@ -173,7 +229,7 @@ entries:
       artifacthub.io/prerelease: "true"
     apiVersion: v2
     appVersion: 0.1.1
-    created: "2026-01-17T08:48:28.148598129Z"
+    created: "2026-01-17T18:38:22.839820015Z"
     description: Keeper Secrets Manager Kubernetes Injector - Inject secrets into
       pods at runtime
     digest: a5d8f7ea4f2274b26ea063bcb18376ed6171a33745ce76b415564c456672f12c
@@ -206,7 +262,7 @@ entries:
       artifacthub.io/prerelease: "true"
     apiVersion: v2
     appVersion: 0.1.0
-    created: "2026-01-17T08:48:28.147958642Z"
+    created: "2026-01-17T18:38:22.839198259Z"
     description: Keeper Secrets Manager Kubernetes Injector - Inject secrets into
       pods at runtime
     digest: 7c1e8fb11031d4ad7b95be5b7797613578c3d70c7eb62c89499de6bbe5d62738
@@ -232,4 +288,4 @@ entries:
     urls:
     - https://keeper-security.github.io/keeper-k8s-injector/keeper-injector-0.1.0.tgz
     version: 0.1.0
-generated: "2026-01-17T08:48:28.14717201Z"
+generated: "2026-01-17T18:38:22.838401397Z"
