@@ -123,7 +123,7 @@ spec:
     spec:
       containers:
       - name: app
-        image: nginx:alpine
+        image: postgres:15-alpine
         ports:
         - containerPort: 80
         volumeMounts:
@@ -135,8 +135,11 @@ spec:
         - /bin/sh
         - -c
         - |
-          # Install PostgreSQL client tools
-          apk add --no-cache ca-certificates postgresql-client > /dev/null 2>&1
+          # Install nginx
+          apk add --no-cache nginx > /dev/null 2>&1
+
+          # Create nginx directories
+          mkdir -p /run/nginx /var/lib/nginx/tmp
 
           # No dependencies needed! Using .env format
           # Function to read credentials from Keeper secret
