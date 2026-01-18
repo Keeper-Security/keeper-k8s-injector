@@ -84,7 +84,8 @@ Secrets will be available at `/keeper/secrets/database-credentials.json`.
 | `sidecar.image.repository` | Sidecar image | `keeper/injector-sidecar` |
 | `sidecar.image.tag` | Sidecar image tag | Chart appVersion |
 | `metrics.enabled` | Enable Prometheus metrics | `true` |
-| `certificate.generate` | Auto-generate TLS cert | `true` |
+| `tls.autoGenerate` | Auto-generate TLS certificates | `true` |
+| `tls.certManager.enabled` | Use cert-manager (optional) | `false` |
 
 ### Full Configuration
 

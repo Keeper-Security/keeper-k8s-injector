@@ -4,7 +4,7 @@ metadata:
   name: {{ include "keeper-injector.fullname" . }}
   labels:
     {{- include "keeper-injector.labels" . | nindent 4 }}
-  {{- if .Values.tls.certManager.enabled }}
+  {{- if and .Values.tls.autoGenerate .Values.tls.certManager.enabled }}
   annotations:
     cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "keeper-injector.certSecretName" . }}
   {{- end }}
@@ -18,7 +18,7 @@ webhooks:
         namespace: {{ .Release.Namespace }}
         path: /mutate-pods
         port: {{ .Values.service.port }}
-      {{- if not .Values.tls.certManager.enabled }}
+      {{- if not .Values.tls.autoGenerate }}
       caBundle: {{ .Values.tls.certificate.ca }}
       {{- end }}
     failurePolicy: {{ .Values.webhook.failurePolicy }}

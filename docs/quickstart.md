@@ -6,21 +6,9 @@ Get secrets injected into your pods in 5 minutes.
 
 - Kubernetes cluster (1.21+, tested with 1.21-1.34)
 - `kubectl` configured
-- [cert-manager](https://cert-manager.io/) installed (required for webhook TLS)
 - Keeper Secrets Manager application configured
 
-## Step 0: Install cert-manager (if not already installed)
-
-The injector requires cert-manager to manage webhook TLS certificates:
-
-```bash
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.1/cert-manager.yaml
-
-# Wait for cert-manager to be ready
-kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout=120s
-```
-
-> **Note**: cert-manager is a widely-used CNCF project. Many clusters already have it installed. Check with `kubectl get pods -n cert-manager`
+> **Note**: TLS certificates are auto-generated. cert-manager is optional.
 
 ## Step 1: Install the Injector
 

@@ -121,17 +121,27 @@ webhook:
   reinvocationPolicy: Never
 
 # TLS configuration
+# Three modes available:
+# 1. Auto-TLS (default): Certificates auto-generated using kube-webhook-certgen
+#    - No external dependencies required
+#    - Set: autoGenerate=true, certManager.enabled=false
+# 2. cert-manager: Use cert-manager for certificate lifecycle management
+#    - Requires cert-manager installed in cluster
+#    - Set: autoGenerate=true, certManager.enabled=true
+# 3. Manual: Provide your own certificates
+#    - For advanced use cases or custom CA requirements
+#    - Set: autoGenerate=false, provide certificate values below
 tls:
-  # -- Auto-generate certificates (requires cert-manager)
+  # -- Auto-generate certificates using built-in mechanism or cert-manager
   autoGenerate: true
-  # -- Use cert-manager for certificate management
+  # -- Use cert-manager for certificate management (optional, requires cert-manager installed)
   certManager:
-    enabled: true
+    enabled: false
     # -- Issuer kind: Issuer or ClusterIssuer
     issuerKind: Issuer
     # -- Issuer name (created by chart if not specified)
     issuerName: ""
-  # -- Manual certificate configuration (if autoGenerate is false)
+  # -- Manual certificate configuration (only used when autoGenerate is false)
   certificate:
     # -- TLS certificate (base64 encoded)
     crt: ""

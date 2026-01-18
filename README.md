@@ -181,8 +181,9 @@ Images are available on [Docker Hub](https://hub.docker.com/u/keeper) with multi
 ## Requirements
 
 - Kubernetes 1.21+ (tested with 1.21-1.34)
-- [cert-manager](https://cert-manager.io/) (for TLS certificates)
 - Keeper Secrets Manager application
+
+TLS certificates are auto-generated. [cert-manager](https://cert-manager.io/) is optional.
 
 ## Links
 

@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-01-17
+
+### Added
+
+- Auto-TLS certificate generation using `kube-webhook-certgen`
+- Built-in certificate management (no cert-manager required)
+- Pre-install Job for certificate generation
+- Post-install Job for webhook configuration patching
+- Dedicated ServiceAccount and RBAC for certificate management
+- Three TLS modes: Auto-TLS (default), cert-manager (optional), Manual (advanced)
+- Comprehensive TLS documentation in advanced.md
+
+### Changed
+
+- **Breaking**: Default TLS mode changed from cert-manager to auto-TLS
+  - Existing installations with explicit `tls.certManager.enabled=true` continue working
+  - New installations no longer require cert-manager
+- cert-manager is now optional, not required
+- NOTES.txt now displays TLS mode and secret location information
+- Updated all documentation to reflect cert-manager as optional dependency
+
+### Upgrading from 0.5.x
+
+**To use auto-TLS (recommended):**
+```bash
+helm upgrade keeper-injector oci://registry-1.docker.io/keeper/keeper-injector --reuse-values
+```
+
+**To keep using cert-manager:**
+```bash
+helm upgrade keeper-injector oci://registry-1.docker.io/keeper/keeper-injector \
+  --reuse-values \
+  --set tls.certManager.enabled=true
+```
+
+**Note**: If you have an existing values.yaml file with explicit `tls.certManager.enabled=true`, no changes are needed. The upgrade will preserve your cert-manager configuration.
+
+### Documentation
+
+- Added comprehensive TLS Certificate Management section to advanced.md
+- Updated quickstart.md to remove cert-manager prerequisite
+- Updated README.md requirements section
+- Added migration guide between TLS modes
+- Added troubleshooting guide for TLS issues
+
 ## [0.5.0] - 2026-01-17
 
 ### Added
