@@ -1,0 +1,91 @@
+# ============================================================================
+# Azure Key Vault - Keeper K8s Injector Demo
+# ============================================================================
+#
+# Example using Azure Key Vault for KSM config storage.
+# No static credentials in Kubernetes - uses Workload Identity!
+#
+# QUICK START:
+#   1. Store KSM config in Azure Key Vault
+#   2. Create managed identity with Key Vault access
+#   3. Create federated credential
+#   4. Update azure-vault-name and CLIENT_ID below
+#   5. kubectl apply -f azure-key-vault.yaml
+#
+# WHAT'S INCLUDED:
+#   - ServiceAccount: With Azure Workload Identity annotation
+#   - Deployment: App that fetches KSM config from Azure Key Vault
+#
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# ServiceAccount with Azure Workload Identity Annotation
+# ----------------------------------------------------------------------------
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: myapp-sa
+  namespace: default
+  annotations:
+    # Azure managed identity client ID
+    # REPLACE: CLIENT_ID with your Azure managed identity client ID
+    azure.workload.identity/client-id: "CLIENT_ID"
+
+---
+# ----------------------------------------------------------------------------
+# Deployment with Azure Key Vault Integration
+# ----------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: azure-secrets-example
+  labels:
+    app: azure-secrets-example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: azure-secrets-example
+  template:
+    metadata:
+      labels:
+        app: azure-secrets-example
+        azure.workload.identity/use: "true"  # Required for Azure WI
+      annotations:
+        # Enable Keeper injection
+        keeper.security/inject: "true"
+
+        # Use Azure Key Vault for KSM config
+        keeper.security/auth-method: "azure-key-vault"
+
+        # REPLACE: Update with your Azure Key Vault name
+        keeper.security/azure-vault-name: "mykeyvault"
+        keeper.security/azure-secret-name: "ksm-config"
+
+        # Secret to inject
+        keeper.security/secret: "demo-secret"
+        keeper.security/refresh-interval: "5m"
+    spec:
+      # Use ServiceAccount with Azure client-id annotation
+      serviceAccountName: myapp-sa
+
+      containers:
+      - name: app
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Keeper K8s Injector - Azure Key Vault Example"
+          echo "KSM config fetched from Azure Key Vault using Workload Identity"
+
+          while [ ! -f /keeper/secrets/demo-secret.json ]; do
+            echo "Waiting for secret injection..."
+            sleep 2
+          done
+
+          echo "Secret injected successfully!"
+          ls -lah /keeper/secrets/
+          tail -f /dev/null

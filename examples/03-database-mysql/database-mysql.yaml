@@ -1,0 +1,281 @@
+# ============================================================================
+# Database MySQL - Keeper K8s Injector Demo
+# ============================================================================
+#
+# This example shows how to inject MySQL credentials from Keeper.
+# Demonstrates credential rotation without pod restarts!
+#
+# QUICK START:
+#   1. Create a "mysql-credentials" record in Keeper with login/password
+#   2. kubectl apply -f database-mysql.yaml
+#   3. kubectl port-forward svc/mysql-client 8080:80
+#   4. Open http://localhost:8080
+#
+# WHAT'S INCLUDED:
+#   - MySQL: Demo database server
+#   - Database Client: App that connects to MySQL using Keeper credentials
+#
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# MySQL Database (Demo Instance)
+# ----------------------------------------------------------------------------
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-init-password
+type: Opaque
+stringData:
+  # Initial root password - the app will use Keeper for credentials
+  MYSQL_ROOT_PASSWORD: "initial-password-change-me"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  labels:
+    app: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-init-password
+              key: MYSQL_ROOT_PASSWORD
+        - name: MYSQL_DATABASE
+          value: "demodb"
+        - name: MYSQL_USER
+          value: "demouser"
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-init-password
+              key: MYSQL_ROOT_PASSWORD
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+        readinessProbe:
+          exec:
+            command: ["mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  labels:
+    app: mysql
+spec:
+  ports:
+  - port: 3306
+    targetPort: 3306
+  selector:
+    app: mysql
+
+---
+# ----------------------------------------------------------------------------
+# Database Client App with Keeper Credential Injection
+# ----------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-client
+  labels:
+    app: mysql-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-client
+  template:
+    metadata:
+      labels:
+        app: mysql-client
+      annotations:
+        # Enable Keeper injection
+        keeper.security/inject: "true"
+
+        # Reference to your KSM auth secret
+        keeper.security/auth-secret: "keeper-credentials"
+
+        # The title of your database credentials record in Keeper
+        keeper.security/secret: "mysql-credentials"
+
+        # Check for credential updates every minute
+        keeper.security/refresh-interval: "60s"
+    spec:
+      containers:
+      - name: app
+        image: mysql:8.0
+        ports:
+        - containerPort: 8080
+        command:
+        - /bin/bash
+        - -c
+        - |
+          # Install dependencies
+          apt-get update -qq && apt-get install -qq -y curl jq netcat-openbsd > /dev/null 2>&1
+
+          # Function to read credentials from Keeper secret
+          get_creds() {
+            if [ -f "/keeper/secrets/mysql-credentials.json" ]; then
+              SECRET=$(cat /keeper/secrets/mysql-credentials.json)
+              DB_USER=$(echo "$SECRET" | jq -r '.login // .username // "demouser"')
+              DB_PASS=$(echo "$SECRET" | jq -r '.password // empty')
+              if [ -z "$DB_PASS" ]; then
+                DB_PASS=$(echo "$SECRET" | jq -r '.fields[] | select(.type=="password") | .value[0]' 2>/dev/null || echo "")
+              fi
+            else
+              DB_USER="demouser"
+              DB_PASS="initial-password-change-me"
+            fi
+          }
+
+          # Function to test database connection
+          test_connection() {
+            get_creds
+            RESULT=$(mysql -h mysql -u "$DB_USER" -p"$DB_PASS" demodb -e "SELECT CONCAT('Connected at ', NOW()) as status;" 2>&1)
+            echo "$RESULT"
+          }
+
+          # Create a simple web server showing connection status
+          while true; do
+            get_creds
+            TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+            CONN_STATUS=$(test_connection)
+            CONN_SUCCESS=$(echo "$CONN_STATUS" | grep -c "Connected at" || echo "0")
+
+            if [ "$CONN_SUCCESS" -gt 0 ]; then
+              STATUS_COLOR="#4CAF50"
+              STATUS_TEXT="✅ Connected"
+              STATUS_DETAIL=$(echo "$CONN_STATUS" | grep "Connected at" || echo "$CONN_STATUS")
+            else
+              STATUS_COLOR="#f44336"
+              STATUS_TEXT="❌ Connection Failed"
+              STATUS_DETAIL="$CONN_STATUS"
+            fi
+
+            # Generate HTML response
+            cat > /tmp/response.html << HTMLEOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>MySQL Connection Demo</title>
+            <meta http-equiv="refresh" content="5">
+            <style>
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                max-width: 800px;
+                margin: 50px auto;
+                padding: 20px;
+                background: #f5f5f5;
+              }
+              .card {
+                background: white;
+                border-radius: 12px;
+                padding: 30px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                margin-bottom: 20px;
+              }
+              .status {
+                padding: 20px;
+                border-radius: 8px;
+                text-align: center;
+                color: white;
+                font-size: 1.5em;
+                background: ${STATUS_COLOR};
+              }
+              .details {
+                background: #1a1a2e;
+                color: #00ff88;
+                padding: 15px;
+                border-radius: 8px;
+                font-family: monospace;
+                margin-top: 20px;
+                white-space: pre-wrap;
+              }
+              .creds {
+                background: #f0f0f0;
+                padding: 15px;
+                border-radius: 8px;
+                margin-top: 15px;
+              }
+              .masked {
+                color: #666;
+                font-style: italic;
+              }
+              h1 { margin-top: 0; }
+              .timestamp { color: #666; font-size: 14px; margin-top: 15px; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <h1>🐬 MySQL Connection Demo</h1>
+              <p>This app reads database credentials from Keeper and connects to MySQL.</p>
+
+              <div class="status">${STATUS_TEXT}</div>
+
+              <div class="details">${STATUS_DETAIL}</div>
+
+              <div class="creds">
+                <strong>Credentials from Keeper:</strong><br>
+                Username: <code>${DB_USER}</code><br>
+                Password: <span class="masked">[hidden - ${#DB_PASS} characters]</span>
+              </div>
+
+              <p class="timestamp">Last check: ${TIMESTAMP}</p>
+              <p class="timestamp">Page auto-refreshes every 5 seconds</p>
+            </div>
+
+            <div class="card">
+              <h3>🔄 Try Credential Rotation</h3>
+              <ol>
+                <li>Update the password in your <strong>"mysql-credentials"</strong> Keeper record</li>
+                <li>Also update the MySQL password: <code>kubectl exec -it deploy/mysql -- mysql -u root -pinitial-password-change-me -e "ALTER USER 'demouser'@'%' IDENTIFIED BY 'newpassword';"</code></li>
+                <li>Watch this page reconnect with the new credentials!</li>
+              </ol>
+            </div>
+          </body>
+          </html>
+          HTMLEOF
+
+            # Serve the page using netcat (simple HTTP server)
+            {
+              echo "HTTP/1.1 200 OK"
+              echo "Content-Type: text/html"
+              echo "Connection: close"
+              echo ""
+              cat /tmp/response.html
+            } | nc -l -p 8080 -q 1 2>/dev/null || sleep 1
+          done
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-client
+  labels:
+    app: mysql-client
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+  selector:
+    app: mysql-client

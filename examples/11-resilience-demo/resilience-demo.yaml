@@ -1,0 +1,112 @@
+# ============================================================================
+# Resilience Demo - Keeper K8s Injector
+# ============================================================================
+#
+# Demonstrates retry, caching, and graceful degradation.
+# Shows how the injector handles network failures!
+#
+# QUICK START:
+#   1. kubectl apply -f resilience-demo.yaml
+#   2. kubectl logs deployment/resilience-demo -f
+#   3. Apply network-policy-block-keeper.yaml to simulate outage
+#   4. Observe cached secrets still available
+#
+# WHAT'S INCLUDED:
+#   - Deployment: App with resilience features enabled
+#   - NetworkPolicy: Simulates Keeper API outage
+#
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Deployment with Resilience Features
+# ----------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: resilience-demo
+  labels:
+    app: resilience-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: resilience-demo
+  template:
+    metadata:
+      labels:
+        app: resilience-demo
+      annotations:
+        # Enable Keeper injection
+        keeper.security/inject: "true"
+        keeper.security/auth-secret: "keeper-credentials"
+
+        # Secret to inject
+        keeper.security/secret: "demo-secret"
+
+        # Enable graceful degradation
+        # Pod continues running with cached secrets if Keeper API is unreachable
+        keeper.security/fail-on-error: "false"
+
+        # Frequent refresh for demo
+        keeper.security/refresh-interval: "30s"
+    spec:
+      containers:
+      - name: app
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Resilience Demo - Keeper K8s Injector"
+          echo ""
+
+          while true; do
+            TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+            if [ -f /keeper/secrets/demo-secret.json ]; then
+              echo "[$TIMESTAMP] ✅ Secret exists: /keeper/secrets/demo-secret.json"
+            else
+              echo "[$TIMESTAMP] ⏳ Waiting for secret..."
+            fi
+            sleep 10
+          done
+
+---
+# ----------------------------------------------------------------------------
+# NetworkPolicy to Simulate Keeper API Outage
+# ----------------------------------------------------------------------------
+# Apply this to block access to Keeper API and test caching behavior:
+#   kubectl apply -f resilience-demo.yaml
+#
+# Remove it to restore access:
+#   kubectl delete networkpolicy block-keeper-api
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: block-keeper-api
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: resilience-demo
+  policyTypes:
+  - Egress
+  egress:
+  # Allow DNS
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+
+  # Allow internal cluster traffic
+  - to:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+
+  # Block everything else (including keepersecurity.com)
+  # This simulates Keeper API being unreachable
