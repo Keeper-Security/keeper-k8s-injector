@@ -93,8 +93,7 @@ In your Keeper vault:
 ### Step 4: Deploy the Example
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/Keeper-Security/keeper-k8s-injector/main/examples/01-hello-secrets/deployment.yaml
-kubectl apply -f https://raw.githubusercontent.com/Keeper-Security/keeper-k8s-injector/main/examples/01-hello-secrets/service.yaml
+kubectl apply -f https://raw.githubusercontent.com/Keeper-Security/keeper-k8s-injector/main/examples/01-hello-secrets/hello-secrets.yaml
 ```
 
 ### Step 5: Wait for Ready
@@ -143,7 +142,7 @@ The pod never restarts. The sidecar container fetches the new value and writes i
 
 ## Configuration
 
-Edit `deployment.yaml` to customize:
+Edit `hello-secrets.yaml` to customize:
 
 | Annotation | Description | Default |
 |------------|-------------|---------|
@@ -154,7 +153,7 @@ Edit `deployment.yaml` to customize:
 ## Cleanup
 
 ```bash
-kubectl delete -f .
+kubectl delete -f hello-secrets.yaml
 ```
 
 ## Troubleshooting
