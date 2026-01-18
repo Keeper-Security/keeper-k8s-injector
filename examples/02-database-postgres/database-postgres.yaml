@@ -123,15 +123,22 @@ spec:
     spec:
       containers:
       - name: app
-        image: postgres:15-alpine
+        image: nginx:alpine
         ports:
-        - containerPort: 3000
+        - containerPort: 80
+        volumeMounts:
+        - name: html
+          mountPath: /usr/share/nginx/html
+        - name: scripts
+          mountPath: /scripts
         command:
         - /bin/sh
         - -c
         - |
-          # No dependencies needed! Using .env format
+          # Install PostgreSQL client tools
+          apk add --no-cache postgresql15-client > /dev/null 2>&1
 
+          # No dependencies needed! Using .env format
           # Function to read credentials from Keeper secret
           get_creds() {
             if [ -f "/keeper/secrets/postgres-credentials.env" ]; then
@@ -153,8 +160,8 @@ spec:
             echo "$RESULT"
           }
 
-          # Create a simple web server showing connection status
-          while true; do
+          # Update page function
+          update_page() {
             get_creds
             TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
             CONN_STATUS=$(test_connection)
@@ -171,7 +178,7 @@ spec:
             fi
 
             # Generate HTML response
-            cat > /tmp/response.html << HTMLEOF
+            cat > /usr/share/nginx/html/index.html << HTMLEOF
           <!DOCTYPE html>
           <html>
           <head>
@@ -253,16 +260,24 @@ spec:
           </body>
           </html>
           HTMLEOF
+          }
 
-            # Serve the page using netcat (simple HTTP server)
-            {
-              echo "HTTP/1.1 200 OK"
-              echo "Content-Type: text/html"
-              echo "Connection: close"
-              echo ""
-              cat /tmp/response.html
-            } | nc -l -p 3000 2>/dev/null || sleep 1
-          done
+          # Initial page generation
+          update_page
+
+          # Background job to refresh the page every 5 seconds
+          while true; do
+            sleep 5
+            update_page
+          done &
+
+          # Start nginx
+          nginx -g 'daemon off;'
+      volumes:
+      - name: html
+        emptyDir: {}
+      - name: scripts
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -273,6 +288,6 @@ metadata:
 spec:
   ports:
   - port: 80
-    targetPort: 3000
+    targetPort: 80
   selector:
     app: db-client
