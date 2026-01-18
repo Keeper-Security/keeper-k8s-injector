@@ -35,7 +35,7 @@ spec:
       - name: app
         image: postgres:15-alpine
         ports:
-        - containerPort: 8080
+        - containerPort: 3000
         command:
         - /bin/sh
         - -c
@@ -171,7 +171,7 @@ spec:
               echo "Connection: close"
               echo ""
               cat /tmp/response.html
-            } | nc -l -p 8080 -q 1 2>/dev/null || sleep 1
+            } | nc -l -p 3000 2>/dev/null || sleep 1
           done
 ---
 apiVersion: v1
@@ -183,6 +183,6 @@ metadata:
 spec:
   ports:
   - port: 80
-    targetPort: 8080
+    targetPort: 3000
   selector:
     app: db-client

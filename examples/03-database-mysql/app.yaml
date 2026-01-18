@@ -31,7 +31,7 @@ spec:
       - name: app
         image: mysql:8.0
         ports:
-        - containerPort: 8080
+        - containerPort: 3000
         command:
         - /bin/bash
         - -c
@@ -169,7 +169,7 @@ spec:
               echo "Connection: close"
               echo ""
               cat /tmp/response.html
-            } | nc -l -p 8080 -q 1 2>/dev/null || sleep 1
+            } | nc -l -p 3000 2>/dev/null || sleep 1
           done
 ---
 apiVersion: v1
@@ -181,6 +181,6 @@ metadata:
 spec:
   ports:
   - port: 80
-    targetPort: 8080
+    targetPort: 3000
   selector:
     app: mysql-client
