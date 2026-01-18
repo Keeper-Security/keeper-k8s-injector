@@ -18,20 +18,7 @@ The simplest possible demo of Keeper K8s Injector. A web page that displays your
 
 ## Complete Setup (From Zero)
 
-### Step 1: Install cert-manager
-
-**Why:** The Keeper injector webhook requires TLS certificates. cert-manager automatically manages these certificates.
-
-```bash
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.1/cert-manager.yaml
-
-# Wait for ready
-kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout=120s
-```
-
-**Note:** Many clusters already have cert-manager. Check first: `kubectl get pods -n cert-manager`
-
-### Step 2: Install Keeper K8s Injector
+### Step 1: Install Keeper K8s Injector
 
 **Why:** This installs the webhook that injects secrets into your pods.
 
@@ -77,7 +64,9 @@ kubectl rollout restart deployment keeper-injector -n keeper-security
 
 **Note:** The Helm chart (v0.5.0+) automatically labels the namespace to prevent this issue.
 
-### Step 3: Create KSM Auth Secret
+**About TLS certificates:** The injector automatically generates TLS certificates during installation (no cert-manager required). If you prefer to use cert-manager, see the [advanced documentation](../../docs/advanced.md#tls-certificate-management).
+
+### Step 2: Create KSM Auth Secret
 
 Get your KSM config from Keeper:
 1. Log into Keeper Vault
@@ -91,7 +80,7 @@ kubectl create secret generic keeper-credentials \
   --from-literal=config='<paste-base64-config-here>'
 ```
 
-### Step 4: Create a Secret in Keeper
+### Step 3: Create a Secret in Keeper
 
 In your Keeper vault:
 1. Create a new record
@@ -101,20 +90,20 @@ In your Keeper vault:
 
 **Important:** The title must be exactly "demo-secret" for this tutorial.
 
-### Step 5: Deploy the Example
+### Step 4: Deploy the Example
 
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/Keeper-Security/keeper-k8s-injector/main/examples/01-hello-secrets/deployment.yaml
 kubectl apply -f https://raw.githubusercontent.com/Keeper-Security/keeper-k8s-injector/main/examples/01-hello-secrets/service.yaml
 ```
 
-### Step 6: Wait for Ready
+### Step 5: Wait for Ready
 
 ```bash
 kubectl wait --for=condition=ready pod -l app=hello-secrets --timeout=120s
 ```
 
-### Step 7: View the Demo
+### Step 6: View the Demo
 
 ```bash
 kubectl port-forward svc/hello-secrets 8080:80
