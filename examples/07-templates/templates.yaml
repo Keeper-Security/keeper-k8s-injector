@@ -1,13 +1,20 @@
-# Template Examples - Keeper K8s Injector
+# ============================================================================
+# Templates - Keeper K8s Injector Demo
+# ============================================================================
 #
 # Demonstrates Go template rendering for flexible secret formatting.
 # Build connection strings, config files, and more without parsing JSON!
 #
-# Usage:
+# QUICK START:
 #   1. Create secrets in Keeper (see README)
-#   2. kubectl apply -f .
+#   2. kubectl apply -f templates.yaml
 #   3. kubectl port-forward svc/template-demo 8080:80
 #   4. Open http://localhost:8080
+#
+# WHAT'S INCLUDED:
+#   - Deployment: App demonstrating various template patterns
+#
+# ============================================================================
 
 apiVersion: apps/v1
 kind: Deployment

@@ -1,12 +1,20 @@
-# API Keys Demo
+# ============================================================================
+# API Keys - Keeper K8s Injector Demo
+# ============================================================================
+#
 # Shows multiple API keys injected into custom paths.
 # Common pattern for SaaS integrations (Stripe, Slack, AWS, etc.)
 #
-# Usage:
+# QUICK START:
 #   1. Create secrets in Keeper: stripe-api-key, slack-webhook, aws-credentials
-#   2. kubectl apply -f .
+#   2. kubectl apply -f api-keys.yaml
 #   3. kubectl port-forward svc/api-keys-demo 8080:80
 #   4. Open http://localhost:8080
+#
+# WHAT'S INCLUDED:
+#   - Deployment: App showing multiple API keys with custom injection paths
+#
+# ============================================================================
 
 apiVersion: apps/v1
 kind: Deployment

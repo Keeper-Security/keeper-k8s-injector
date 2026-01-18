@@ -1,12 +1,21 @@
-# NGINX with TLS from Keeper
+# ============================================================================
+# TLS NGINX - Keeper K8s Injector Demo
+# ============================================================================
+#
 # Demonstrates TLS certificate management using Keeper file attachments.
 # Certificates rotate automatically without pod restart!
 #
-# Usage:
+# QUICK START:
 #   1. Upload cert.pem and key.pem as file attachments to a Keeper record
-#   2. kubectl apply -f .
+#   2. kubectl apply -f tls-nginx.yaml
 #   3. kubectl port-forward svc/nginx-tls 8443:443
 #   4. Open https://localhost:8443 (accept self-signed warning)
+#
+# WHAT'S INCLUDED:
+#   - ConfigMap: NGINX TLS configuration
+#   - Deployment: NGINX server with TLS certificates from Keeper
+#
+# ============================================================================
 
 apiVersion: v1
 kind: ConfigMap
