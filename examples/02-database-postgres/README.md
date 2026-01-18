@@ -41,7 +41,7 @@ In your Keeper vault:
 
 ```bash
 # Deploy everything
-kubectl apply -f database-postgres.yaml
+kubectl apply -f https://raw.githubusercontent.com/Keeper-Security/keeper-k8s-injector/main/examples/02-database-postgres/database-postgres.yaml
 
 # Wait for PostgreSQL to be ready
 kubectl wait --for=condition=ready pod -l app=postgres --timeout=120s

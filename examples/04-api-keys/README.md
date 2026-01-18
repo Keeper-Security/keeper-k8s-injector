@@ -17,20 +17,14 @@ Most applications integrate with multiple external services (Stripe for payments
 
 ## Prerequisites
 
-- Keeper K8s Injector installed (see [Example 01 - Hello Secrets](../01-hello-secrets/) for complete installation)
-- Keeper Secrets Manager application configured
+- Keeper K8s Injector installed
+- `keeper-credentials` secret created
+
+**First time?** See [Example 01 - Hello Secrets](../01-hello-secrets/#complete-setup-from-zero) for complete installation instructions (Steps 1-2).
 
 ## Quick Start
 
-### 1. Create Your KSM Auth Secret
-
-```bash
-# If you haven't already
-kubectl create secret generic keeper-credentials \
-  --from-file=config=path/to/your/ksm-config.json
-```
-
-### 2. Create API Key Records in Keeper
+### 1. Create API Key Records in Keeper
 
 Create three records in your Keeper vault:
 
@@ -47,19 +41,19 @@ Create three records in your Keeper vault:
 - Login field: `AKIAIOSFODNN7EXAMPLE`
 - Password field: `wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY`
 
-### 3. Deploy the Demo
+### 2. Deploy the Demo
 
 ```bash
-kubectl apply -f deployment.yaml
+kubectl apply -f https://raw.githubusercontent.com/Keeper-Security/keeper-k8s-injector/main/examples/04-api-keys/api-keys.yaml
 ```
 
-### 4. Wait for Ready
+### 3. Wait for Ready
 
 ```bash
 kubectl wait --for=condition=ready pod -l app=api-keys-demo --timeout=120s
 ```
 
-### 5. View the Demo
+### 4. View the Demo
 
 ```bash
 kubectl port-forward svc/api-keys-demo 8080:80

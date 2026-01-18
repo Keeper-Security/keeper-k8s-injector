@@ -13,26 +13,21 @@ Demonstrates retry logic, caching, and graceful degradation when Keeper API is u
 
 ## Prerequisites
 
-1. Keeper K8s Injector installed
-2. Keeper Secrets Manager application configured
-3. kubectl configured
+- Keeper K8s Injector installed
+- `keeper-credentials` secret created
+- kubectl configured
+
+**First time?** See [Example 01 - Hello Secrets](../01-hello-secrets/#complete-setup-from-zero) for complete installation instructions (Steps 1-2).
 
 ## Quick Start
 
-### Step 1: Create KSM Auth Secret
+### Step 1: Deploy the Example
 
 ```bash
-kubectl create secret generic keeper-credentials \
-  --from-literal=config='<your-base64-ksm-config>'
+kubectl apply -f https://raw.githubusercontent.com/Keeper-Security/keeper-k8s-injector/main/examples/11-resilience-demo/resilience-demo.yaml
 ```
 
-### Step 2: Deploy the Example
-
-```bash
-kubectl apply -f deployment.yaml
-```
-
-### Step 3: Verify Normal Operation
+### Step 2: Verify Normal Operation
 
 ```bash
 # Wait for pod
@@ -45,17 +40,19 @@ kubectl logs -l app=resilience-demo -c keeper-secrets-sidecar | grep "fetching s
 kubectl exec deployment/resilience-demo -- cat /keeper/secrets/demo-secret.json
 ```
 
-### Step 4: Simulate Keeper API Outage
+### Step 3: Simulate Keeper API Outage
 
-Apply NetworkPolicy to block Keeper API:
+The resilience-demo.yaml includes a NetworkPolicy that blocks Keeper API. To activate it, apply just the NetworkPolicy:
 
 ```bash
-kubectl apply -f network-policy-block-keeper.yaml
+kubectl apply -f https://raw.githubusercontent.com/Keeper-Security/keeper-k8s-injector/main/examples/11-resilience-demo/resilience-demo.yaml
 ```
+
+Then enable the policy by labeling the pod (the policy targets the app=resilience-demo label).
 
 This blocks outbound traffic to keepersecurity.com
 
-### Step 5: Observe Cache Fallback
+### Step 4: Observe Cache Fallback
 
 ```bash
 # Trigger manual refresh (delete pod to force init)
@@ -71,7 +68,7 @@ kubectl logs -l app=resilience-demo -c keeper-secrets-sidecar | grep "cache"
 # {"level":"warn","msg":"using cached secret (Keeper API unavailable after retry)","secret":"demo-secret","cache_age":"2m30s"}
 ```
 
-### Step 6: Verify Pod Still Works
+### Step 5: Verify Pod Still Works
 
 ```bash
 # Pod should be running with cached secrets
@@ -80,7 +77,7 @@ kubectl exec deployment/resilience-demo -- cat /keeper/secrets/demo-secret.json
 # Secret file exists (from cache)
 ```
 
-### Step 7: Restore Keeper Access
+### Step 6: Restore Keeper Access
 
 ```bash
 # Remove network policy

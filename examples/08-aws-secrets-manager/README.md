@@ -106,12 +106,13 @@ aws iam put-role-policy \
 
 ### Step 4: Create Kubernetes Resources
 
-Apply the example manifests:
+Apply the example manifest:
 
 ```bash
-kubectl apply -f serviceaccount.yaml
-kubectl apply -f deployment.yaml
+kubectl apply -f https://raw.githubusercontent.com/Keeper-Security/keeper-k8s-injector/main/examples/08-aws-secrets-manager/aws-secrets-manager.yaml
 ```
+
+**Note:** Remember to replace `ACCOUNT_ID` in the ServiceAccount annotation with your AWS account ID before applying.
 
 ### Step 5: Verify
 

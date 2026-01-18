@@ -25,9 +25,11 @@ Keeper solves this by:
 
 ## Prerequisites
 
-- Keeper K8s Injector installed (see [Example 01 - Hello Secrets](../01-hello-secrets/) for complete installation)
-- Keeper Secrets Manager application configured
-3. TLS certificate and private key files
+- Keeper K8s Injector installed
+- `keeper-credentials` secret created
+- TLS certificate and private key files
+
+**First time?** See [Example 01 - Hello Secrets](../01-hello-secrets/#complete-setup-from-zero) for complete installation instructions (Steps 1-2).
 
 ## Quick Start
 
@@ -53,27 +55,19 @@ In your Keeper vault:
 3. Click "Add File" again and upload `server.key`
 4. Save the record
 
-### 3. Create Your KSM Auth Secret
+### 3. Deploy NGINX
 
 ```bash
-# If you haven't already
-kubectl create secret generic keeper-credentials \
-  --from-file=config=path/to/your/ksm-config.json
+kubectl apply -f https://raw.githubusercontent.com/Keeper-Security/keeper-k8s-injector/main/examples/05-tls-nginx/tls-nginx.yaml
 ```
 
-### 4. Deploy NGINX
-
-```bash
-kubectl apply -f deployment.yaml
-```
-
-### 5. Wait for Ready
+### 4. Wait for Ready
 
 ```bash
 kubectl wait --for=condition=ready pod -l app=nginx-tls --timeout=120s
 ```
 
-### 6. Test HTTPS
+### 5. Test HTTPS
 
 ```bash
 kubectl port-forward svc/nginx-tls 8443:443

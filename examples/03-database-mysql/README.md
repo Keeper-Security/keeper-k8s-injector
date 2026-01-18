@@ -32,7 +32,7 @@ In your Keeper vault:
 
 ```bash
 # Deploy everything
-kubectl apply -f database-mysql.yaml
+kubectl apply -f https://raw.githubusercontent.com/Keeper-Security/keeper-k8s-injector/main/examples/03-database-mysql/database-mysql.yaml
 
 # Wait for MySQL to be ready
 kubectl wait --for=condition=ready pod -l app=mysql --timeout=120s

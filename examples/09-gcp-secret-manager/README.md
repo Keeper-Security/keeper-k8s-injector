@@ -65,9 +65,10 @@ gcloud iam service-accounts add-iam-policy-binding \
 ### Step 4: Deploy Kubernetes Resources
 
 ```bash
-kubectl apply -f serviceaccount.yaml
-kubectl apply -f deployment.yaml
+kubectl apply -f https://raw.githubusercontent.com/Keeper-Security/keeper-k8s-injector/main/examples/09-gcp-secret-manager/gcp-secret-manager.yaml
 ```
+
+**Note:** Remember to replace `PROJECT_ID` in the ServiceAccount annotation and deployment spec with your GCP project ID before applying.
 
 ### Step 5: Verify
 

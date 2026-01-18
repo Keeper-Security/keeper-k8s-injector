@@ -93,12 +93,11 @@ az identity federated-credential create \
 
 ### Step 4: Deploy Kubernetes Resources
 
-Update `serviceaccount.yaml` with your `IDENTITY_CLIENT_ID`, then:
-
 ```bash
-kubectl apply -f serviceaccount.yaml
-kubectl apply -f deployment.yaml
+kubectl apply -f https://raw.githubusercontent.com/Keeper-Security/keeper-k8s-injector/main/examples/10-azure-key-vault/azure-key-vault.yaml
 ```
+
+**Note:** Remember to replace `CLIENT_ID` in the ServiceAccount annotation and `mykeyvault` in the deployment spec with your values before applying.
 
 ### Step 5: Verify
 

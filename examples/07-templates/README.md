@@ -15,19 +15,14 @@ Demonstrates Go template rendering for flexible secret formatting. Build connect
 
 ## Prerequisites
 
-- Keeper K8s Injector installed (see [Example 01 - Hello Secrets](../01-hello-secrets/) for complete installation)
-- Keeper Secrets Manager application configured
+- Keeper K8s Injector installed
+- `keeper-credentials` secret created
+
+**First time?** See [Example 01 - Hello Secrets](../01-hello-secrets/#complete-setup-from-zero) for complete installation instructions (Steps 1-2).
 
 ## Quick Start
 
-### 1. Create Your KSM Auth Secret
-
-```bash
-kubectl create secret generic keeper-credentials \
-  --from-file=config=path/to/your/ksm-config.json
-```
-
-### 2. Create Secrets in Keeper
+### 1. Create Secrets in Keeper
 
 #### Secret 1: postgres-credentials
 
@@ -44,19 +39,19 @@ kubectl create secret generic keeper-credentials \
 - Custom field `appName`: `myapp`
 - Custom field `apiKey`: `sk_live_abc123xyz`
 
-### 3. Deploy the Example
+### 2. Deploy the Example
 
 ```bash
-kubectl apply -f deployment.yaml
+kubectl apply -f https://raw.githubusercontent.com/Keeper-Security/keeper-k8s-injector/main/examples/07-templates/templates.yaml
 ```
 
-### 4. Wait for Ready
+### 3. Wait for Ready
 
 ```bash
 kubectl wait --for=condition=ready pod -l app=template-demo --timeout=120s
 ```
 
-### 5. View the Demo
+### 4. View the Demo
 
 ```bash
 kubectl port-forward svc/template-demo 8080:80

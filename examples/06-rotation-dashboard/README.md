@@ -39,7 +39,7 @@ In your Keeper vault:
 ### 2. Deploy the Dashboard
 
 ```bash
-kubectl apply -f rotation-dashboard.yaml
+kubectl apply -f https://raw.githubusercontent.com/Keeper-Security/keeper-k8s-injector/main/examples/06-rotation-dashboard/rotation-dashboard.yaml
 ```
 
 ### 3. Wait for Ready
