@@ -13,20 +13,14 @@ A real-world example showing how to inject database credentials from Keeper into
 
 ## Prerequisites
 
-- Keeper K8s Injector installed (see [Example 01 - Hello Secrets](../01-hello-secrets/) for complete installation)
-- Keeper Secrets Manager application configured
+- Keeper K8s Injector installed
+- `keeper-credentials` secret created
+
+**First time?** See [Example 01 - Hello Secrets](../01-hello-secrets/#complete-setup-from-zero) for complete installation instructions (Steps 1-2).
 
 ## Quick Start
 
-### 1. Create Your KSM Auth Secret
-
-```bash
-# If you haven't already
-kubectl create secret generic keeper-credentials \
-  --from-file=config=path/to/your/ksm-config.json
-```
-
-### 2. Create Database Credentials in Keeper
+### 1. Create Database Credentials in Keeper
 
 In your Keeper vault:
 1. Create a new record titled **"mysql-credentials"**
@@ -34,11 +28,11 @@ In your Keeper vault:
 3. Set the **password** field to: `initial-password-change-me`
 4. Save the record
 
-### 3. Deploy MySQL and the Client App
+### 2. Deploy MySQL and the Client App
 
 ```bash
 # Deploy everything
-kubectl apply -f .
+kubectl apply -f database-mysql.yaml
 
 # Wait for MySQL to be ready
 kubectl wait --for=condition=ready pod -l app=mysql --timeout=120s
@@ -47,7 +41,7 @@ kubectl wait --for=condition=ready pod -l app=mysql --timeout=120s
 kubectl wait --for=condition=ready pod -l app=mysql-client --timeout=120s
 ```
 
-### 4. View the Demo
+### 3. View the Demo
 
 ```bash
 kubectl port-forward svc/mysql-client 8080:80
@@ -108,7 +102,7 @@ Monitor failed connection attempts to detect credential rotation issues early.
 ## Cleanup
 
 ```bash
-kubectl delete -f .
+kubectl delete -f database-mysql.yaml
 ```
 
 ## Troubleshooting
