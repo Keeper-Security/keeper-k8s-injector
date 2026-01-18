@@ -102,7 +102,7 @@ kubectl apply -f https://raw.githubusercontent.com/Keeper-Security/keeper-k8s-in
 kubectl wait --for=condition=ready pod -l app=hello-secrets --timeout=120s
 ```
 
-This command will wait (up to 2 minutes) until the pod is fully running. It will automatically complete when the pod is ready. You don't need to check manually.
+**Wait for it:** This command will wait (up to 2 minutes) until the pod is fully running, then automatically exit. You don't need to check manually - when the command completes, your pod is ready!
 
 ### Step 6: View the Demo
 
