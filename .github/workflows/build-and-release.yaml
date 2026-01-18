@@ -1,15 +1,11 @@
-# Release Workflow for keeper-k8s-injector
+# Build and Release Workflow for keeper-k8s-injector
 #
-# WHAT THIS DOES:
-#   1. Builds and pushes Docker images to Docker Hub
-#   2. Packages and pushes Helm chart to Docker Hub OCI registry
-#   3. Updates GitHub Pages Helm repository (gh-pages branch)
-#   4. Creates GitHub Release with downloadable artifacts
+# WORKFLOW LOGIC:
+#   - Pull Request: test + lint (fast feedback)
+#   - Push to main: test + lint + build images (validation)
+#   - Tag push (v*): test + lint + build + push images + Helm + GitHub Release + GitHub Pages
 #
-# HOW TO TRIGGER:
-#   git tag vX.Y.Z && git push origin vX.Y.Z
-#
-# PUBLISHED ARTIFACTS:
+# PUBLISHED ARTIFACTS (on tag only):
 #   - Docker: keeper/injector-webhook:X.Y.Z, keeper/injector-sidecar:X.Y.Z
 #   - Helm OCI: oci://registry-1.docker.io/keeper/keeper-injector
 #   - Helm HTTP: https://keeper-security.github.io/keeper-k8s-injector
@@ -19,44 +15,126 @@
 #   - DOCKERHUB_USERNAME
 #   - DOCKERHUB_TOKEN
 
-name: Release
+name: Build and Release
 
 on:
   push:
+    branches: [main]
     tags:
       - 'v*'
+  pull_request:
+    branches: [main]
 
 env:
   GO_VERSION: '1.25.6'
 
 jobs:
-  release:
-    name: Release
+  # ========================================
+  # TEST AND LINT (runs on all events)
+  # ========================================
+  test:
+    name: Test
     runs-on: ubuntu-latest
-    environment: prod  # Required to access DOCKERHUB_* secrets
-    permissions:
-      contents: write
-      packages: write
     steps:
-      # ========================================
-      # SETUP
-      # ========================================
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache: false  # Disable cache due to Go 1.25 extraction issues
+          cache: false
 
       - name: Clean Go cache
         run: go clean -modcache -cache -testcache
 
+      - name: Download dependencies
+        run: go mod download
+
       - name: Run tests
-        run: go test -v ./...
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.out
+          fail_ci_if_error: false
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          install-mode: goinstall
+          args: --timeout=5m
+
+  # ========================================
+  # BUILD IMAGES (runs on main and tags)
+  # ========================================
+  build-images:
+    name: Build Images
+    runs-on: ubuntu-latest
+    needs: [test, lint]
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build webhook image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.webhook
+          push: false
+          platforms: linux/amd64,linux/arm64
+          tags: keeper/injector-webhook:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build sidecar image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.sidecar
+          push: false
+          platforms: linux/amd64,linux/arm64
+          tags: keeper/injector-sidecar:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ========================================
+  # RELEASE (runs on tag push only)
+  # Publishes: Docker images, Helm chart, GitHub release, GitHub Pages
+  # ========================================
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: [test, lint]
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment: prod
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -71,11 +149,7 @@ jobs:
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      # ========================================
-      # BUILD AND PUSH DOCKER IMAGES
-      # Images: keeper/injector-webhook, keeper/injector-sidecar
-      # Platforms: linux/amd64, linux/arm64
-      # ========================================
+      # Build and push Docker images
       - name: Build and push webhook image
         uses: docker/build-push-action@v6
         with:
@@ -102,10 +176,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # ========================================
-      # PACKAGE AND PUSH HELM CHART
-      # OCI: oci://registry-1.docker.io/keeper/keeper-injector
-      # ========================================
+      # Package and push Helm chart
       - name: Install Helm
         uses: azure/setup-helm@v4
         with:
@@ -125,14 +196,11 @@ jobs:
           helm package charts/keeper-injector -d .helm-packages
 
       - name: Push Helm chart to Docker Hub OCI
-        continue-on-error: true  # OCI push is optional; GitHub Pages is the primary distribution
+        continue-on-error: true
         run: |
           helm push .helm-packages/keeper-injector-${{ steps.version.outputs.VERSION }}.tgz oci://registry-1.docker.io/keeper
 
-      # ========================================
-      # GENERATE KUBECTL INSTALL MANIFEST
-      # For users who prefer: kubectl apply -f install.yaml
-      # ========================================
+      # Generate kubectl install manifest
       - name: Generate install manifest
         run: |
           helm template keeper-injector charts/keeper-injector \
@@ -141,10 +209,7 @@ jobs:
             --set sidecar.tag=${{ steps.version.outputs.VERSION }} \
             > deploy/install.yaml
 
-      # ========================================
-      # CREATE GITHUB RELEASE
-      # Includes: Helm .tgz chart, install.yaml manifest
-      # ========================================
+      # Create GitHub Release
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -155,11 +220,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # ========================================
-      # UPDATE GITHUB PAGES HELM REPOSITORY
-      # URL: https://keeper-security.github.io/keeper-k8s-injector
-      # This enables: helm repo add keeper https://keeper-security.github.io/keeper-k8s-injector
-      # ========================================
+      # Update GitHub Pages Helm repository
       - name: Checkout gh-pages branch
         uses: actions/checkout@v4
         with:
