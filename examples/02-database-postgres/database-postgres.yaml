@@ -16,10 +16,10 @@
 #   - Database Client: App that connects to PostgreSQL using Keeper credentials
 #
 # ============================================================================
+# PostgreSQL Database
+# This is a simple PostgreSQL instance for demo purposes.
+# In production, you'd use a managed database service.
 
-# ----------------------------------------------------------------------------
-# PostgreSQL Database (Demo Instance)
-# ----------------------------------------------------------------------------
 apiVersion: v1
 kind: Secret
 metadata:
@@ -84,11 +84,10 @@ spec:
     targetPort: 5432
   selector:
     app: postgres
+# Database Client App
+# This app connects to PostgreSQL using credentials from Keeper.
+# Demonstrates real-world database credential injection.
 
----
-# ----------------------------------------------------------------------------
-# Database Client App with Keeper Credential Injection
-# ----------------------------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -107,17 +106,14 @@ spec:
       annotations:
         # Enable Keeper injection
         keeper.security/inject: "true"
-
         # Reference to your KSM auth secret
         keeper.security/auth-secret: "keeper-credentials"
-
         # Use YAML config to specify .env format (no jq needed!)
         keeper.security/config: |
           secrets:
             - record: postgres-credentials
               path: /keeper/secrets/postgres-credentials.env
               format: env
-
         # Check for credential updates every minute
         keeper.security/refresh-interval: "60s"
     spec:
@@ -125,23 +121,13 @@ spec:
       - name: app
         image: postgres:15-alpine
         ports:
-        - containerPort: 80
-        volumeMounts:
-        - name: html
-          mountPath: /usr/share/nginx/html
-        - name: scripts
-          mountPath: /scripts
+        - containerPort: 3000
         command:
         - /bin/sh
         - -c
         - |
-          # Install nginx
-          apk add --no-cache nginx > /dev/null 2>&1
-
-          # Create nginx directories
-          mkdir -p /run/nginx /var/lib/nginx/tmp
-
           # No dependencies needed! Using .env format
+
           # Function to read credentials from Keeper secret
           get_creds() {
             if [ -f "/keeper/secrets/postgres-credentials.env" ]; then
@@ -163,8 +149,8 @@ spec:
             echo "$RESULT"
           }
 
-          # Update page function
-          update_page() {
+          # Create a simple web server showing connection status
+          while true; do
             get_creds
             TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
             CONN_STATUS=$(test_connection)
@@ -181,7 +167,7 @@ spec:
             fi
 
             # Generate HTML response
-            cat > /usr/share/nginx/html/index.html << HTMLEOF
+            cat > /tmp/response.html << HTMLEOF
           <!DOCTYPE html>
           <html>
           <head>
@@ -263,24 +249,16 @@ spec:
           </body>
           </html>
           HTMLEOF
-          }
 
-          # Initial page generation
-          update_page
-
-          # Background job to refresh the page every 5 seconds
-          while true; do
-            sleep 5
-            update_page
-          done &
-
-          # Start nginx
-          nginx -g 'daemon off;'
-      volumes:
-      - name: html
-        emptyDir: {}
-      - name: scripts
-        emptyDir: {}
+            # Serve the page using netcat (simple HTTP server)
+            {
+              echo "HTTP/1.1 200 OK"
+              echo "Content-Type: text/html"
+              echo "Connection: close"
+              echo ""
+              cat /tmp/response.html
+            } | nc -l -p 3000 2>/dev/null || sleep 1
+          done
 ---
 apiVersion: v1
 kind: Service
@@ -291,6 +269,6 @@ metadata:
 spec:
   ports:
   - port: 80
-    targetPort: 80
+    targetPort: 3000
   selector:
     app: db-client
