@@ -136,7 +136,7 @@ spec:
         - -c
         - |
           # Install PostgreSQL client tools
-          apk add --no-cache postgresql-client > /dev/null 2>&1
+          apk add --no-cache ca-certificates postgresql-client > /dev/null 2>&1
 
           # No dependencies needed! Using .env format
           # Function to read credentials from Keeper secret
