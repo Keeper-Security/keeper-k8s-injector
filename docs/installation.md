@@ -88,6 +88,8 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: test-secrets
+  labels:
+    app: test-secrets
   annotations:
     keeper.security/inject: "true"
     keeper.security/auth-secret: "keeper-credentials"
@@ -111,15 +113,22 @@ kubectl apply -f test-pod.yaml
 # Wait for pod to be ready
 kubectl wait --for=condition=Ready pod/test-secrets --timeout=60s
 
-# View in browser
+# Option 1: View in browser (local Kubernetes)
 kubectl port-forward pod/test-secrets 8080:80
 # Open http://localhost:8080 to see your secret!
 
-# Or check via command line
-kubectl exec test-secrets -- cat /keeper/secrets/my-database-credentials.json
+# Option 2: View in browser (Killercoda/remote cluster)
+kubectl expose pod test-secrets --type=NodePort --port=80 --name=test-secrets-svc
+kubectl get svc test-secrets-svc
+# Note the NodePort (30000-32767 range)
+# In Killercoda: Click ☰ menu → Traffic/Ports → Enter the NodePort → Access
+
+# Option 3: Check via command line
+kubectl exec test-secrets -- cat /keeper/secrets/YOUR-SECRET-TITLE.json
 
 # Cleanup when done
 kubectl delete pod test-secrets
+kubectl delete svc test-secrets-svc 2>/dev/null || true
 ```
 
 ## Summary

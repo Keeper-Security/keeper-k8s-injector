@@ -79,6 +79,8 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: test-secrets
+  labels:
+    app: test-secrets
   annotations:
     keeper.security/inject: "true"
     keeper.security/auth-secret: "keeper-auth"
@@ -102,12 +104,18 @@ kubectl apply -f test-pod.yaml
 # Wait for ready
 kubectl wait --for=condition=Ready pod/test-secrets --timeout=60s
 
-# View in browser
+# View in browser (local cluster)
 kubectl port-forward pod/test-secrets 8080:80
-# Open http://localhost:8080 to see your secret!
+# Open http://localhost:8080
+
+# Or for Killercoda/remote cluster
+kubectl expose pod test-secrets --type=NodePort --port=80 --name=test-secrets-svc
+kubectl get svc test-secrets-svc
+# Note the NodePort (30000-32767), then use Killercoda Traffic/Ports menu
 
 # Cleanup
 kubectl delete pod test-secrets
+kubectl delete svc test-secrets-svc 2>/dev/null || true
 ```
 
 ## Examples
