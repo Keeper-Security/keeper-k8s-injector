@@ -25,7 +25,7 @@ annotations:
   artifacthub.io/category: security
   artifacthub.io/license: MIT
   artifacthub.io/operator: "false"
-  artifacthub.io/prerelease: "true"
+  artifacthub.io/prerelease: "false"
   artifacthub.io/links: |
     - name: Documentation
       url: https://docs.keeper.io/secrets-manager/

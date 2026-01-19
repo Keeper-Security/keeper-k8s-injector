@@ -75,6 +75,10 @@ Keeper K8s Injector automatically injects secrets from Keeper Secrets Manager in
 
 ## Next Steps
 
-- [Quick Start](quickstart.md) - Get your first secret injected in 5 minutes
-- [Annotations Reference](annotations.md) - All available annotations
-- [Advanced Configuration](advanced.md) - Helm values, OIDC, multi-cluster
+- [Installation Guide](installation.md) - Get your first secret injected in 5 minutes
+- [Configuration Guide](configuration.md) - All available annotations and Helm values
+- [Production Deployment](production.md) - HA, monitoring, and best practices
+
+---
+
+**[← Back to Documentation Index](INDEX.md)**

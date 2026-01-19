@@ -165,3 +165,7 @@ When reporting issues, include:
 - Pod annotations
 - Init container and sidecar logs
 - Events: `kubectl get events -n <namespace>`
+
+---
+
+**[← Back to Documentation Index](INDEX.md)**

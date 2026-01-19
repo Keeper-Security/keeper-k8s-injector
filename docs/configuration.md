@@ -1,17 +1,106 @@
-# Annotations Reference
+# Configuration Guide
+
+Complete reference for configuring Keeper K8s Injector through annotations and Helm values.
+
+## Quick Reference
+
+**Minimal Configuration:**
+```yaml
+annotations:
+  keeper.security/inject: "true"
+  keeper.security/auth-secret: "keeper-auth"
+  keeper.security/secret: "my-secret"
+```
+
+**For detailed examples, see [Examples](../examples/) folder.**
+
+---
+
+## Table of Contents
+
+1. [Authentication Setup](#authentication-setup)
+2. [Annotation Reference](#annotation-reference)
+3. [Helm Chart Values](#helm-chart-values)
+
+---
+
+## Authentication Setup
+
+### Method 1: Kubernetes Secret (Default)
+
+Store KSM configuration in a Kubernetes Secret:
+
+```bash
+# Create from base64 config (recommended)
+kubectl create secret generic keeper-credentials \
+  --from-literal=config='<paste-base64-config-here>' \
+  -n default
+
+# Or from JSON file
+kubectl create secret generic keeper-credentials \
+  --from-file=config=ksm-config.json \
+  -n default
+```
+
+Use in pod:
+```yaml
+annotations:
+  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/auth-method: "secret"  # default, can be omitted
+```
+
+### Method 2: AWS Secrets Manager (EKS with IRSA)
+
+```yaml
+annotations:
+  keeper.security/auth-method: "aws-secrets-manager"
+  keeper.security/aws-secret-id: "prod/keeper/ksm-config"
+  keeper.security/aws-region: "us-west-2"
+```
+
+Requires EKS cluster with OIDC and ServiceAccount with IAM role annotation.
+
+**Security benefit:** No KSM config stored in Kubernetes cluster.
+
+### Method 3: GCP Secret Manager (GKE with Workload Identity)
+
+```yaml
+annotations:
+  keeper.security/auth-method: "gcp-secret-manager"
+  keeper.security/gcp-secret-id: "projects/PROJECT/secrets/ksm-config/versions/latest"
+```
+
+Requires GKE with Workload Identity and ServiceAccount with GCP SA annotation.
+
+### Method 4: Azure Key Vault (AKS with Workload Identity)
+
+```yaml
+annotations:
+  keeper.security/auth-method: "azure-key-vault"
+  keeper.security/azure-vault-name: "mykeyvault"
+  keeper.security/azure-secret-name: "ksm-config"
+```
+
+Requires AKS with Workload Identity and ServiceAccount with Azure client-id annotation.
+
+**See [Cloud Authentication Guide](cloud-auth.md) for detailed setup instructions.**
+
+---
+
+## Annotation Reference
 
 All annotations use the `keeper.security/` prefix.
 
-## Required Annotations
+### Required Annotations
 
 | Annotation | Description | Example |
 |------------|-------------|---------|
 | `keeper.security/inject` | Enable injection | `"true"` |
 | `keeper.security/auth-secret` | K8s secret with KSM config | `"keeper-auth"` |
 
-## Secret Selection
+### Secret Selection
 
-### Level 1: Single Secret (Simplest)
+#### Level 1: Single Secret (Simplest)
 
 ```yaml
 annotations:
@@ -22,7 +111,7 @@ annotations:
 
 Result: `/keeper/secrets/database-credentials.json`
 
-### Level 2: Multiple Secrets
+#### Level 2: Multiple Secrets
 
 ```yaml
 annotations:
@@ -36,7 +125,7 @@ Result:
 - `/keeper/secrets/api-keys.json`
 - `/keeper/secrets/tls-cert.json`
 
-### Level 3: Custom Paths
+#### Level 3: Custom Paths
 
 ```yaml
 annotations:
@@ -46,7 +135,7 @@ annotations:
   keeper.security/secret-api: "/etc/myapp/api-keys.json"
 ```
 
-### Level 4: Field Extraction
+#### Level 4: Field Extraction
 
 Extract specific fields from a record:
 
@@ -59,7 +148,7 @@ annotations:
 
 Result: `/app/secrets/db-pass` contains only the password value (raw, not JSON)
 
-### Level 5: Full Configuration
+#### Level 5: Full Configuration
 
 For complex scenarios, use YAML configuration:
 
@@ -78,7 +167,7 @@ annotations:
         format: json
 ```
 
-### Level 6: Templates (Advanced)
+#### Level 6: Templates (Advanced)
 
 Use Go templates for custom formatting:
 
@@ -100,7 +189,7 @@ Result: Shell script with connection string built from Keeper fields.
 
 Templates support 100+ functions from [Sprig](http://masterminds.github.io/sprig/). See [Template Guide](templates.md) for details.
 
-## Behavior Annotations
+### Behavior Annotations
 
 | Annotation | Default | Description |
 |------------|---------|-------------|
@@ -110,7 +199,7 @@ Templates support 100+ functions from [Sprig](http://masterminds.github.io/sprig
 | `keeper.security/signal` | `""` | Signal to send on refresh (e.g., `"SIGHUP"`) |
 | `keeper.security/strict-lookup` | `"false"` | Fail if multiple records match title |
 
-## Environment Variable Injection Annotations
+### Environment Variable Injection Annotations
 
 **⚠️ Security Notice**: Environment variables are less secure than file-based injection. See [Security Trade-offs](#security-trade-offs) below.
 
@@ -119,7 +208,7 @@ Templates support 100+ functions from [Sprig](http://masterminds.github.io/sprig
 | `keeper.security/inject-env-vars` | `"false"` | Inject secrets as environment variables instead of files |
 | `keeper.security/env-prefix` | `""` | Optional prefix for all env var names (e.g., `"DB_"`) |
 
-### Simple Usage (All Secrets as Env Vars)
+#### Simple Usage (All Secrets as Env Vars)
 
 ```yaml
 annotations:
@@ -136,7 +225,7 @@ PASSWORD=secret123
 HOSTNAME=db.example.com
 ```
 
-### With Prefix (Namespace Env Vars)
+#### With Prefix (Namespace Env Vars)
 
 ```yaml
 annotations:
@@ -154,7 +243,7 @@ DB_PASSWORD=secret123
 DB_HOSTNAME=db.example.com
 ```
 
-### Mixed Mode (Some as Files, Some as Env Vars)
+#### Mixed Mode (Some as Files, Some as Env Vars)
 
 For fine-grained control, use YAML configuration:
 
@@ -176,7 +265,7 @@ annotations:
 - Env vars: `DB_LOGIN`, `DB_PASSWORD`, `DB_HOSTNAME`
 - File: `/keeper/secrets/tls.json`
 
-### Security Trade-offs
+#### Security Trade-offs
 
 **When to use environment variables**:
 - Legacy applications that only support env vars
@@ -202,15 +291,15 @@ annotations:
 - ✅ More secure for sensitive data
 - ✅ tmpfs storage prevents disk persistence
 
-## Kubernetes Secret Injection (v0.9.0)
+### Kubernetes Secret Injection (v0.9.0)
 
 **⚠️ Security Notice**: K8s Secrets are less secure than file-based injection. Use for GitOps workflows or apps requiring K8s Secret mounts.
 
-### Overview
+#### Overview
 
 Create Kubernetes Secret objects directly from Keeper secrets, enabling native K8s integration while maintaining efficient Keeper backend calls.
 
-### When to Use
+#### When to Use
 
 - ✅ Apps that mount K8s Secrets as volumes
 - ✅ GitOps workflows requiring K8s Secret manifests
@@ -228,7 +317,7 @@ Create Kubernetes Secret objects directly from Keeper secrets, enabling native K
 | `keeper.security/k8s-secret-rotation` | `"false"` | Enable sidecar rotation (updates Secret on refresh) |
 | `keeper.security/k8s-secret-owner-ref` | `"true"` | Auto-delete Secret when pod terminates |
 
-### Basic Usage
+#### Basic Usage
 
 ```yaml
 apiVersion: v1
@@ -255,7 +344,7 @@ spec:
 
 **Result**: K8s Secret `app-secrets` created with all fields from `database-credentials`.
 
-### Custom Key Mapping
+#### Custom Key Mapping
 
 Map Keeper fields to specific Secret keys:
 
@@ -286,57 +375,7 @@ data:
   POSTGRES_HOST: <base64>
 ```
 
-### TLS Certificate Injection
-
-```yaml
-annotations:
-  keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-credentials"
-  keeper.security/config: |
-    secrets:
-      - record: "TLS Certificate"
-        fileName: "cert.pem"
-        injectAsK8sSecret: true
-        k8sSecretName: "tls-cert"
-        k8sSecretType: "kubernetes.io/tls"
-        k8sSecretKeys:
-          tls.crt: "cert.pem"
-          tls.key: "key.pem"
-```
-
-**Result**: K8s Secret of type `kubernetes.io/tls` ready for Ingress use.
-
-### Conflict Resolution Modes
-
-#### Overwrite (Default)
-```yaml
-keeper.security/k8s-secret-mode: "overwrite"
-```
-- Replaces all data in existing Secret
-- Use for: Primary secret source
-
-#### Merge
-```yaml
-keeper.security/k8s-secret-mode: "merge"
-```
-- Preserves existing keys, adds/updates new ones
-- Use for: Multiple pods updating same Secret
-
-#### Skip If Exists
-```yaml
-keeper.security/k8s-secret-mode: "skip-if-exists"
-```
-- Does nothing if Secret already exists
-- Use for: Idempotent deployments
-
-#### Fail
-```yaml
-keeper.security/k8s-secret-mode: "fail"
-```
-- Returns error if Secret already exists
-- Use for: Strict validation
-
-### Rotation via Sidecar
+#### Rotation via Sidecar
 
 Enable automatic Secret updates when secrets change in Keeper:
 
@@ -354,40 +393,7 @@ annotations:
 
 **Result**: Sidecar updates K8s Secret every 5 minutes with latest values from Keeper.
 
-### Owner Reference Control
-
-By default, K8s Secrets are deleted when the pod terminates (via owner reference). To keep Secrets after pod deletion:
-
-```yaml
-annotations:
-  keeper.security/k8s-secret-owner-ref: "false"
-```
-
-**Use cases**:
-- Secrets shared across multiple pods
-- Manual Secret lifecycle management
-- StatefulSet deployments
-
-### Multiple Secrets from Folder
-
-Create one K8s Secret per record in a folder:
-
-```yaml
-annotations:
-  keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-credentials"
-  keeper.security/k8s-secret-rotation: "true"
-  keeper.security/refresh-interval: "5m"
-  keeper.security/config: |
-    folders:
-      - folderPath: "Production/APIs"
-        injectAsK8sSecret: true
-        k8sSecretNamePrefix: "api-"
-```
-
-**Result**: Secrets created: `api-stripe`, `api-twilio`, `api-sendgrid` (one per record in folder)
-
-### Security Comparison
+#### Security Comparison
 
 | Aspect | Files (tmpfs) | Env Vars | K8s Secrets |
 |--------|--------------|----------|-------------|
@@ -400,41 +406,16 @@ annotations:
 | **Rotation** | ✅ Yes (sidecar) | ❌ No | ✅ Yes (sidecar) |
 | **Best For** | Production | Legacy apps | K8s-native apps |
 
-### Security Recommendations
+### Authentication Annotations
 
-1. **Enable etcd encryption** if using K8s Secret injection
-2. **Use RBAC** to limit who can read Secrets
-3. **Prefer file-based injection** for maximum security
-4. **Use K8s Secrets only when**:
-   - GitOps requires K8s Secret manifests
-   - Apps expect K8s Secret mounts
-   - CSI driver integration needed
-5. **Monitor Secret access** via K8s audit logs
-
-### Supported Secret Types
-
-- `Opaque` - Default, arbitrary key-value pairs
-- `kubernetes.io/tls` - TLS certificates (requires `tls.crt` and `tls.key`)
-- `kubernetes.io/dockerconfigjson` - Docker registry auth
-- `kubernetes.io/basic-auth` - Basic authentication
-- `kubernetes.io/ssh-auth` - SSH authentication
-
-### Efficient Batching
-
-The injector makes **ONE** Keeper API call to fetch all records, then creates multiple K8s Secrets. This minimizes API load and speeds up pod admission.
-
-**Example**: 10 secrets = 1 API call (not 10)
-
-## Authentication Annotations
-
-### Basic Authentication (K8s Secret)
+#### Basic Authentication (K8s Secret)
 
 | Annotation | Default | Description |
 |------------|---------|-------------|
 | `keeper.security/auth-secret` | Required | K8s secret name with KSM config |
 | `keeper.security/auth-method` | `"secret"` | Auth method (see below) |
 
-### Cloud Provider Authentication
+#### Cloud Provider Authentication
 
 | Auth Method | Description | Cloud |
 |-------------|-------------|-------|
@@ -443,7 +424,7 @@ The injector makes **ONE** Keeper API call to fetch all records, then creates mu
 | `"gcp-secret-manager"` | GCP Secret Manager via Workload Identity | GKE |
 | `"azure-key-vault"` | Azure Key Vault via Workload Identity | AKS |
 
-### AWS Secrets Manager Annotations
+#### AWS Secrets Manager Annotations
 
 | Annotation | Description | Example |
 |------------|-------------|---------|
@@ -459,7 +440,7 @@ annotations:
   keeper.security/aws-region: "us-west-2"
 ```
 
-### GCP Secret Manager Annotations
+#### GCP Secret Manager Annotations
 
 | Annotation | Description | Example |
 |------------|-------------|---------|
@@ -473,7 +454,7 @@ annotations:
   keeper.security/gcp-secret-id: "projects/my-project/secrets/ksm-config/versions/latest"
 ```
 
-### Azure Key Vault Annotations
+#### Azure Key Vault Annotations
 
 | Annotation | Description | Example |
 |------------|-------------|---------|
@@ -489,9 +470,9 @@ annotations:
   keeper.security/azure-secret-name: "ksm-config"
 ```
 
-See [Cloud Secrets Guide](cloud-secrets.md) for complete setup instructions.
+See [Cloud Authentication Guide](cloud-auth.md) for complete setup instructions.
 
-## CA Certificate Annotations (Corporate Proxies)
+### CA Certificate Annotations (Corporate Proxies)
 
 For environments with SSL inspection (Zscaler, Palo Alto, Cisco Umbrella, etc.):
 
@@ -512,7 +493,9 @@ annotations:
 
 This loads the custom CA certificate and adds it to the system trust store, allowing the sidecar to connect through corporate proxies.
 
-## Output Formats
+See [Corporate Proxy Guide](corporate-proxy.md) for detailed setup.
+
+### Output Formats
 
 When using Level 5+ configuration, you can specify output format:
 
@@ -528,37 +511,7 @@ When using Level 5+ configuration, you can specify output format:
 
 For `template` format, use the `template:` field to specify a Go template string. See [Template Guide](templates.md).
 
-## Examples
-
-### Minimal Configuration
-```yaml
-annotations:
-  keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-auth"
-  keeper.security/secret: "my-secret"
-```
-
-### Production Configuration
-```yaml
-annotations:
-  keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-auth"
-  keeper.security/secrets: "database, redis, api-keys"
-  keeper.security/refresh-interval: "10m"
-  keeper.security/fail-on-error: "true"
-  keeper.security/signal: "SIGHUP"
-```
-
-### Init-Only Mode (No Rotation)
-```yaml
-annotations:
-  keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-auth"
-  keeper.security/secret: "static-config"
-  keeper.security/init-only: "true"
-```
-
-## Secrets by UID
+### Secrets by UID
 
 If you prefer using record UIDs instead of titles:
 
@@ -571,7 +524,7 @@ annotations:
 
 The injector auto-detects UIDs vs titles based on format.
 
-## Keeper Notation
+### Keeper Notation
 
 Use Keeper notation for precise field extraction with custom output paths:
 
@@ -588,7 +541,7 @@ Result:
 - `/app/secrets/db-pass` contains the password value (raw text)
 - `/app/secrets/db-user` contains the login value (raw text)
 
-### Notation Syntax
+#### Notation Syntax
 
 The Keeper notation format is: `keeper://RECORD_UID/TYPE/SELECTOR`
 
@@ -598,7 +551,7 @@ The Keeper notation format is: `keeper://RECORD_UID/TYPE/SELECTOR`
 | `file` | filename | Download a file attachment |
 | `custom_field` | field label | Extract custom field by label |
 
-### Folder Path Notation
+#### Folder Path Notation
 
 You can now use folder paths in Keeper notation to reference secrets by their location:
 
@@ -627,26 +580,7 @@ annotations:
 - Folder structure provides context
 - Case-sensitive matching for precision
 
-**Examples with different selectors:**
-
-```yaml
-# Extract entire record
-keeper.security/secret-full: "Production/Databases/mysql-creds:/app/secrets/mysql.json"
-
-# Extract specific field
-keeper.security/secret-password: "Production/Databases/mysql-creds/field/password:/app/secrets/db-pass"
-
-# Extract custom field
-keeper.security/secret-token: "Dev/APIs/stripe/custom_field/api_token:/app/secrets/token"
-
-# Get record type
-keeper.security/secret-type: "Production/Databases/mysql-creds/type:/app/metadata/type.txt"
-
-# Get record title
-keeper.security/secret-title: "Production/Databases/mysql-creds/title:/app/metadata/title.txt"
-```
-
-## File Attachments
+### File Attachments
 
 Download file attachments from Keeper records:
 
@@ -663,11 +597,11 @@ Result:
 - `/app/certs/server.pem` contains the `cert.pem` file from "Database Credentials" record
 - `/app/certs/server.key` contains the `key.pem` file from "Database Credentials" record
 
-## Folder Support
+### Folder Support
 
 Fetch all secrets from a Keeper folder:
 
-### By Folder UID
+#### By Folder UID
 
 ```yaml
 annotations:
@@ -679,7 +613,7 @@ annotations:
 
 Result: All secrets in the folder are written as JSON files to `/app/folder-secrets/`
 
-### By Folder Path
+#### By Folder Path
 
 You can now reference folders by their path instead of UID:
 
@@ -695,7 +629,7 @@ Result: All secrets in the `Production/Databases` folder are written to `/app/db
 
 Folder paths are case-sensitive and must match the exact folder names in your Keeper vault.
 
-## Complete Example
+### Complete Example
 
 This example demonstrates multiple annotation types:
 
@@ -726,3 +660,185 @@ spec:
     - name: app
       image: myapp:latest
 ```
+
+---
+
+## Helm Chart Values
+
+### Installation
+
+```bash
+helm repo add keeper https://keeper-security.github.io/keeper-k8s-injector
+helm install keeper-injector keeper/keeper-injector -f values.yaml
+```
+
+### Custom Values
+
+```yaml
+# values.yaml
+
+# Number of webhook replicas (HA)
+replicaCount: 3
+
+# Container images
+image:
+  repository: keeper/injector-webhook
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+
+sidecar:
+  repository: keeper/injector-sidecar
+  tag: "1.0.0"
+
+# Resource limits for webhook
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Resource limits for sidecar (per pod)
+sidecarResources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 20m
+    memory: 64Mi
+
+# Exclude additional namespaces from injection
+excludedNamespaces:
+  - kube-system
+  - kube-public
+  - monitoring
+  - istio-system
+
+# Default settings for all pods (can be overridden per-pod)
+defaults:
+  refreshInterval: "10m"
+  failOnError: true
+
+# Prometheus metrics
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+
+# High availability
+leaderElection:
+  enabled: true
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# TLS certificate management
+tls:
+  autoGenerate: true  # Auto-generate certs (default)
+  certManager:
+    enabled: false    # Use cert-manager (requires cert-manager installed)
+    issuerKind: Issuer
+    issuerName: ""    # Leave empty to auto-create
+
+# Network policies
+networkPolicy:
+  enabled: false
+
+# Logging configuration
+logging:
+  level: info  # debug, info, warn, error
+  format: json  # json or text
+```
+
+### Production Configuration Example
+
+```yaml
+# production-values.yaml
+replicaCount: 3
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+
+tls:
+  certManager:
+    enabled: true
+
+logging:
+  level: info
+  format: json
+
+excludedNamespaces:
+  - kube-system
+  - kube-public
+  - cert-manager
+  - monitoring
+```
+
+Install with production values:
+
+```bash
+helm install keeper-injector keeper/keeper-injector -f production-values.yaml
+```
+
+### Common Customizations
+
+#### Enable cert-manager
+
+```yaml
+tls:
+  certManager:
+    enabled: true
+```
+
+Requires cert-manager to be installed first.
+
+#### Exclude Namespaces
+
+```yaml
+excludedNamespaces:
+  - my-excluded-namespace
+  - another-namespace
+```
+
+Pods in these namespaces will not be injected.
+
+#### Custom Sidecar Resources
+
+```yaml
+sidecarResources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 128Mi
+```
+
+#### Debug Logging
+
+```yaml
+logging:
+  level: debug
+  format: text  # Human-readable for debugging
+```
+
+---
+
+**[← Back to Documentation Index](INDEX.md)**

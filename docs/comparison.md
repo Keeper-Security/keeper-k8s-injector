@@ -368,3 +368,7 @@ Most modern apps (Python, Node.js, Go) have native JSON parsing - no workaround 
 - [External Secrets Operator Templating v2](https://external-secrets.io/latest/guides/templating/)
 - [External Secrets Operator Templating v1](https://external-secrets.io/latest/guides/templating-v1/)
 - [Secrets Store CSI Driver](https://secrets-store-csi-driver.sigs.k8s.io/)
+
+---
+
+**[← Back to Documentation Index](INDEX.md)**

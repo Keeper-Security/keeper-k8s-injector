@@ -286,6 +286,10 @@ echo "If secrets are present, CA cert is working correctly!"
 
 ## See Also
 
-- [Features Guide](features.md) - Complete feature reference
-- [Annotations Reference](annotations.md) - All annotations
+- [Configuration Guide](configuration.md) - All annotations
 - [Troubleshooting](troubleshooting.md) - Common issues
+- [Cloud Authentication](cloud-auth.md) - AWS, GCP, Azure setup
+
+---
+
+**[← Back to Documentation Index](INDEX.md)**

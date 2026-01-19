@@ -175,3 +175,7 @@ spec:
 - **Docker Images**:
   - `keeper/injector-webhook` on [Docker Hub](https://hub.docker.com/r/keeper/injector-webhook)
   - `keeper/injector-sidecar` on [Docker Hub](https://hub.docker.com/r/keeper/injector-sidecar)
+
+---
+
+**[← Back to Documentation Index](INDEX.md)**

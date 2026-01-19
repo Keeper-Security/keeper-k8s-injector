@@ -597,6 +597,10 @@ No. Requires cloud provider OIDC infrastructure. Use K8s Secret auth for on-prem
 
 ## See Also
 
-- [Features Guide](features.md) - Complete feature reference
-- [Annotations Reference](annotations.md) - All annotations
+- [Configuration Guide](configuration.md) - All annotations
 - [Examples](../examples/) - Working examples
+- [Corporate Proxy Guide](corporate-proxy.md) - SSL inspection setup
+
+---
+
+**[← Back to Documentation Index](INDEX.md)**

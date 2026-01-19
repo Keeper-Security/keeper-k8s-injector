@@ -463,6 +463,10 @@ template: |
 
 ## See Also
 
-- [Annotations Reference](annotations.md) - All annotation options
+- [Configuration Guide](configuration.md) - All annotation options
 - [Sprig Documentation](http://masterminds.github.io/sprig/) - Complete function reference
 - [Go Templates](https://pkg.go.dev/text/template) - Go template syntax guide
+
+---
+
+**[← Back to Documentation Index](INDEX.md)**

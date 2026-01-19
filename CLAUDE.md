@@ -55,6 +55,48 @@ This is the Keeper Kubernetes Secrets Injector - a mutating admission webhook th
 - Use clear, technical descriptions instead of enthusiasm
 - Emojis are acceptable in user-facing demo UIs, but minimize in READMEs
 
+## Documentation Organization
+
+All user-facing documentation is in `docs/` folder. Navigation is controlled by `docs/INDEX.md`.
+
+### Documentation Structure (v0.9.0+)
+
+- **docs/INDEX.md** - Navigation hub (single source of truth)
+- No numbered prefixes (flat structure for maintainability)
+- Simple footer navigation (just link to INDEX.md)
+
+**Core Documentation Files:**
+- `overview.md` - What/why/architecture
+- `installation.md` - Quick setup
+- `configuration.md` - All config (annotations + Helm values merged)
+- `injection-modes.md` - Files/Env/K8s Secrets
+- `templates.md` - Template formatting
+- `rotation.md` - Secret rotation
+- `cloud-auth.md` - AWS/GCP/Azure
+- `corporate-proxy.md` - SSL inspection
+- `troubleshooting.md` - Common problems
+- `architecture.md` - Deep dive
+- `production.md` - Production config
+- `migration.md` - From ESO/Vault
+- `comparison.md` - vs other tools
+
+### When Adding New Documentation
+
+1. Create doc in `docs/` folder (no numbered prefixes)
+2. Add entry to `docs/INDEX.md` in appropriate section
+3. Add navigation footer: `[← Back to Documentation Index](INDEX.md)`
+4. Update related docs to cross-reference new content
+5. Use relative links (e.g., `[Configuration](configuration.md)`)
+
+### Root-Level Documentation
+
+Keep at root (do NOT move to docs/):
+- `README.md` - Main entry point (GitHub/npm standard)
+- `CHANGELOG.md` - Version history (changelog tools)
+- `TESTING.md` - Developer testing procedures
+- `RELEASING.md` - Maintainer release procedures
+- `CLAUDE.md` - Project automation rules
+
 ## Changelog Guidelines
 
 - **Be factual, not promotional** - State what was added, not why it's good
