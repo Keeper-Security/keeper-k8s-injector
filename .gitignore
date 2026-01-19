@@ -51,3 +51,8 @@ kind-config.yaml
 # Test artifacts
 test/e2e/*.log
 test/ksm-config.b64
+
+# KSM config files (credentials)
+config.base64
+ksm-config.json
+*.ksm-config.*
