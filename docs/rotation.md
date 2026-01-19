@@ -1,6 +1,8 @@
 # Secret Rotation
 
-Automatic secret rotation keeps your applications up-to-date with the latest secrets from Keeper without requiring pod restarts.
+Automatic secret rotation syncs changes from Keeper Secrets Manager to your pods without requiring pod restarts.
+
+**Important**: This feature detects when secrets are **updated in Keeper** (for example, when you manually rotate a database password in Keeper) and automatically updates the injected files in your pods. The injector does not actively rotate credentials in target systems (like databases)—it only reflects changes you make in Keeper.
 
 ## How It Works
 

@@ -22,7 +22,7 @@ Learn how to use specific features:
 
 - **[Injection Modes](injection-modes.md)** - Files, Environment Variables, K8s Secrets
 - **[Templates](templates.md)** - Advanced secret formatting with Go templates
-- **[Secret Rotation](rotation.md)** - Automatic updates with sidecar
+- **[Secret Rotation](rotation.md)** - Sync changes from Keeper automatically
 - **[Troubleshooting](troubleshooting.md)** - Fix common problems
 
 ## 🏗️ Advanced Topics

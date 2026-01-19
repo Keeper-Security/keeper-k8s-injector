@@ -79,14 +79,16 @@ template: |
 
 ---
 
-## Secret Rotation
+## Sync from Source (Rotation)
+
+Detects when secrets change in the source system (Keeper/Vault/AWS/etc.) and updates pods.
 
 | Feature | Keeper | Vault Agent | ESO | AWS CSI | 1Password |
 |---------|--------|-------------|-----|---------|-----------|
-| **Automatic refresh** | ✅ Sidecar polls | ✅ Sidecar polls | ✅ Controller syncs | ✅ Driver polls | ✅ Sidecar |
+| **Automatic polling** | ✅ Sidecar polls | ✅ Sidecar polls | ✅ Controller syncs | ✅ Driver polls | ✅ Sidecar |
 | **Configurable interval** | ✅ Per-pod | ✅ Per-pod | ✅ Per-ExternalSecret | ✅ Global | ⚠️ Limited |
 | **Signal on update** | ✅ SIGHUP, etc. | ✅ process-supervisor | ❌ Needs Reloader | ❌ | ❌ |
-| **File-based rotation** | ✅ In-place update | ✅ In-place update | ❌ Recreates Secret | ✅ | ✅ |
+| **In-place file update** | ✅ Yes | ✅ Yes | ❌ Recreates Secret | ✅ Yes | ✅ Yes |
 | **Zero-downtime** | ✅ | ✅ | ⚠️ Depends on app | ✅ | ✅ |
 
 **Winner:** Keeper, Vault Agent (tie) - Both have signal support for app notification

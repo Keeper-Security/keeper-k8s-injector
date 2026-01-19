@@ -7,10 +7,12 @@ Keeper K8s Injector supports three methods for injecting secrets into pods. Choo
 | Feature | Files | Env Vars | K8s Secrets |
 |---------|-------|----------|-------------|
 | **Storage** | tmpfs (RAM) | Pod spec | etcd (disk) |
-| **Rotation** | ✅ Yes | ❌ No | ✅ Yes |
+| **Sync from Keeper** | ✅ Yes | ❌ No | ✅ Yes |
 | **Visibility** | Hidden | `kubectl describe` | `kubectl get secret` |
 | **Security** | Highest | Medium | Medium |
 | **Use For** | Production | Legacy apps | GitOps/K8s-native |
+
+**Sync from Keeper**: When you update a secret in Keeper, the sidecar detects the change and updates the injected files/K8s Secrets without pod restart.
 
 ---
 
@@ -21,7 +23,7 @@ Secrets are written to tmpfs-backed files in `/keeper/secrets/`. This is the def
 ### Advantages
 
 - ✅ Not visible in pod metadata or process listings
-- ✅ Can be rotated without pod restart (via sidecar)
+- ✅ Syncs changes from Keeper without pod restart (via sidecar)
 - ✅ More secure for sensitive data
 - ✅ Supports all output formats (JSON, env, YAML, etc.)
 
@@ -78,7 +80,7 @@ annotations:
 
 ✅ **Recommended for:**
 - Production environments
-- Secrets that rotate frequently
+- Secrets that change frequently in Keeper
 - Sensitive credentials (database passwords, API keys)
 - Compliance requirements (SOC2, PCI-DSS)
 - Applications that can read from files
@@ -95,7 +97,7 @@ Secrets can be injected directly as environment variables in all containers. Use
 
 ### Security Notice
 
-**⚠️ Warning**: Environment variables are visible in `kubectl describe pod` and process listings. Cannot be rotated without pod restart.
+**⚠️ Warning**: Environment variables are visible in `kubectl describe pod` and process listings. Cannot sync changes from Keeper without pod restart.
 
 ### Basic Usage
 
@@ -157,19 +159,19 @@ annotations:
 
 ✅ **Use for:**
 - Legacy applications that only support env vars
-- Simple read-once patterns (not frequently rotated secrets)
+- Simple read-once patterns (secrets don't change often in Keeper)
 - Development/testing environments
 - Apps that expect specific env var names
 
 ❌ **Avoid for:**
 - Production secrets (use files instead)
-- Secrets that need rotation without pod restart
+- Secrets that change frequently in Keeper
 - Compliance environments (SOC2, PCI-DSS)
 - Sensitive credentials
 
 ### Limitations
 
-- ❌ Cannot be rotated without pod restart
+- ❌ Cannot sync changes from Keeper without pod restart
 - ❌ Visible in `kubectl describe pod` output
 - ❌ Visible in process listings (`ps aux`)
 - ❌ May be captured in logs or debugging output
@@ -281,9 +283,9 @@ keeper.security/k8s-secret-mode: "fail"
 ```
 Returns error if Secret already exists. Use for strict validation.
 
-### Rotation via Sidecar
+### Sync Changes from Keeper via Sidecar
 
-Enable automatic Secret updates when secrets change in Keeper:
+Enable automatic K8s Secret updates when you change secrets in Keeper:
 
 ```yaml
 annotations:
@@ -352,7 +354,7 @@ annotations:
 | **Encryption** | N/A (RAM) | N/A | Requires etcd encryption |
 | **Audit** | Container logs | Pod metadata | K8s audit logs |
 | **Visibility** | Hidden | `kubectl describe` | `kubectl get secret` |
-| **Rotation** | ✅ Yes (sidecar) | ❌ No | ✅ Yes (sidecar) |
+| **Sync from Keeper** | ✅ Yes (sidecar) | ❌ No | ✅ Yes (sidecar) |
 | **Best For** | Production | Legacy apps | K8s-native apps |
 
 ---

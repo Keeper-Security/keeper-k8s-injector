@@ -9,9 +9,9 @@ Automatically inject secrets from [Keeper Secrets Manager](https://www.keepersec
 
 ## Features
 
-- **No Kubernetes Secrets created** - Secrets are written directly to pod tmpfs
-- **Pod-scoped lifetime** - Secrets are removed when pod terminates
-- **Automatic rotation** - Sidecar refreshes secrets without pod restarts
+- **Multiple injection modes** - Files (tmpfs), environment variables, or Kubernetes Secrets
+- **Pod-scoped lifetime** - Secrets removed when pod terminates (default mode)
+- **Automatic sync from Keeper** - Sidecar detects changes in Keeper and updates pods without restarts
 - **Simple configuration** - Just two annotations to get started
 - **Title-based lookup** - Reference secrets by name, not UIDs
 - **Keeper Notation** - Use `keeper://UID/field/password` for precise extraction
@@ -159,16 +159,16 @@ keeper.security/file-cert: "Database Credentials:cert.pem:/app/certs/server.pem"
 
 | Feature | Keeper Injector | External Secrets Operator |
 |---------|-----------------|---------------------------|
-| Creates K8s Secrets | No | Yes |
-| Secret storage | Pod tmpfs (memory) | etcd |
-| Secrets in etcd backups | No | Yes |
+| Creates K8s Secrets | Optional | Yes (always) |
+| Secret storage | Pod tmpfs (default) | etcd |
+| Secrets in etcd backups | Optional | Yes |
 | Configuration | Annotations | CRDs |
-| Runtime rotation | Yes (sidecar) | Sync interval |
-| Pod isolation | Yes | Shared secrets |
+| Sync from Keeper | Sidecar polling | Controller polling |
+| Pod isolation | Yes (default) | Shared secrets |
 
 **Use Keeper Injector when:** Security is paramount, you need secrets out of etcd, or require per-pod isolation.
 
-**Use ESO when:** You need secrets as K8s Secret objects, or apps require environment variables only.
+**Use ESO when:** You need all secrets as K8s Secret objects, or prefer CRD-based GitOps workflows.
 
 ## Docker Images
 

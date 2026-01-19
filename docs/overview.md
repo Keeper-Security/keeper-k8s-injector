@@ -2,20 +2,29 @@
 
 ## What is Keeper K8s Injector?
 
-Keeper K8s Injector automatically injects secrets from Keeper Secrets Manager into your Kubernetes pods at runtime. Instead of creating Kubernetes Secret objects, it writes secrets directly to a memory-backed volume (tmpfs) inside your pods.
+Keeper K8s Injector automatically injects secrets from Keeper Secrets Manager into your Kubernetes pods at runtime using a **mutating webhook** (a Kubernetes component that intercepts pod creation and adds secret injection containers before the pod starts).
+
+**Injection modes supported:**
+- **Files in tmpfs** (default) - Memory-backed files, never written to disk
+- **Environment variables** - Injected directly into containers
+- **Kubernetes Secrets** - Creates K8s Secret objects for GitOps workflows
+
+The default file-based mode writes secrets to a memory-backed volume (tmpfs) that disappears when the pod terminates—secrets are never persisted to disk or etcd.
 
 ## How is it different from ESO (External Secrets Operator)?
 
 | Feature | Keeper K8s Injector | ESO |
 |---------|---------------------|-----|
-| Creates K8s Secrets | No | Yes |
-| Secret storage | Pod-scoped tmpfs | etcd |
+| Creates K8s Secrets | No (by default)* | Yes |
+| Secret storage | Pod-scoped tmpfs* | etcd |
 | Secret lifetime | Pod lifetime | Persistent |
 | Configuration | Pod annotations | CRDs |
-| Rotation | Sidecar auto-refresh | Sync interval |
+| Sync from Keeper | Sidecar auto-refresh | Controller polling |
 | Setup complexity | 2 annotations | Multiple CRDs |
 
-**Bottom line**: ESO syncs secrets to Kubernetes Secret objects. Keeper Injector writes secrets directly into pods with no K8s Secrets created.
+*Default mode. Can also inject as environment variables or Kubernetes Secrets.
+
+**Bottom line**: ESO syncs secrets to Kubernetes Secret objects. Keeper Injector's default mode writes secrets directly into pod tmpfs with no K8s Secrets created.
 
 ## When should you use it?
 
