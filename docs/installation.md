@@ -77,32 +77,50 @@ kubectl create secret generic keeper-credentials \
   -n default
 ```
 
-## Step 3: Annotate Your Pod
+## Step 3: Create a Test Pod
 
-Add two annotations to your pod:
+Create a simple test pod to verify injection works:
 
 ```yaml
 apiVersion: v1
 kind: Pod
 metadata:
-  name: my-app
+  name: test-secrets
   annotations:
     keeper.security/inject: "true"
     keeper.security/auth-secret: "keeper-credentials"
-    keeper.security/secret: "my-database-credentials"  # Your secret title in KSM
+    keeper.security/secret: "my-database-credentials"  # ← Use any secret title from your KSM
 spec:
   containers:
-    - name: app
-      image: your-app:latest
+    - name: nginx
+      image: nginx:alpine
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          echo '<h1>Secret Injected Successfully!</h1><pre>' > /usr/share/nginx/html/index.html
+          cat /keeper/secrets/my-database-credentials.json >> /usr/share/nginx/html/index.html
+          echo '</pre>' >> /usr/share/nginx/html/index.html
+          nginx -g 'daemon off;'
 ```
 
 ## Step 4: Deploy and Verify
 
 ```bash
-kubectl apply -f my-pod.yaml
+# Save the YAML above as test-pod.yaml and apply it
+kubectl apply -f test-pod.yaml
 
-# Check that secrets were injected
-kubectl exec my-app -- cat /keeper/secrets/my-database-credentials.json
+# Wait for pod to be ready
+kubectl wait --for=condition=Ready pod/test-secrets --timeout=60s
+
+# Option 1: View in browser
+kubectl port-forward pod/test-secrets 8080:80
+# Open http://localhost:8080 to see your secret!
+
+# Option 2: Check via command line
+kubectl exec test-secrets -- cat /keeper/secrets/my-database-credentials.json
+
+# Cleanup when done
+kubectl delete pod test-secrets
 ```
 
 ## Summary
