@@ -2,7 +2,7 @@
 
 ## What is Keeper K8s Injector?
 
-Keeper K8s Injector automatically injects secrets from Keeper Secrets Manager into your Kubernetes pods at runtime using a **mutating webhook** (a Kubernetes component that intercepts pod creation and adds secret injection containers before the pod starts).
+Keeper K8s Injector automatically injects secrets from Keeper Secrets Manager into your Kubernetes pods at runtime using a **[mutating webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#what-are-admission-webhooks)** (a Kubernetes component that intercepts pod creation and adds secret injection containers before the pod starts).
 
 **Injection modes supported:**
 - **Files in tmpfs** (default) - Memory-backed files, never written to disk
