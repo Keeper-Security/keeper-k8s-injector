@@ -62,6 +62,100 @@ Fetches all secrets from a Keeper folder.
 
 ---
 
+## Injection Targets
+
+Keeper K8s Injector supports two methods for injecting secrets into pods:
+
+### Method 1: Files (Recommended)
+
+Secrets are written to tmpfs-backed files in `/keeper/secrets/`. This is the default and recommended approach.
+
+**Advantages**:
+- ✅ Not visible in pod metadata or process listings
+- ✅ Can be rotated without pod restart (via sidecar)
+- ✅ More secure for sensitive data
+- ✅ Supports all output formats (JSON, env, YAML, etc.)
+
+**Example**:
+```yaml
+annotations:
+  keeper.security/inject: "true"
+  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/secret: "database-credentials"
+```
+
+Result: `/keeper/secrets/database-credentials.json`
+
+### Method 2: Environment Variables (Optional)
+
+Secrets can be injected directly as environment variables in all containers. Use this for legacy applications that only support env vars.
+
+**⚠️ Security Notice**: Environment variables are visible in `kubectl describe pod` and process listings. Cannot be rotated without pod restart.
+
+**Simple Usage**:
+```yaml
+annotations:
+  keeper.security/inject: "true"
+  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/inject-env-vars: "true"
+  keeper.security/secret: "database-credentials"
+```
+
+**Result**: Environment variables injected into all containers:
+```bash
+LOGIN=demouser
+PASSWORD=secret123
+HOSTNAME=db.example.com
+```
+
+**With Prefix**:
+```yaml
+annotations:
+  keeper.security/inject-env-vars: "true"
+  keeper.security/env-prefix: "DB_"
+  keeper.security/secret: "database-credentials"
+```
+
+**Result**:
+```bash
+DB_LOGIN=demouser
+DB_PASSWORD=secret123
+DB_HOSTNAME=db.example.com
+```
+
+**Mixed Mode** (some secrets as files, some as env vars):
+```yaml
+annotations:
+  keeper.security/inject: "true"
+  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/config: |
+    secrets:
+      - record: database-credentials
+        injectAsEnvVars: true
+        envPrefix: "DB_"
+      - record: tls-certificate
+        path: /keeper/secrets/tls.json
+```
+
+**When to use environment variables**:
+- Legacy applications that only support env vars
+- Simple read-once patterns (not frequently rotated secrets)
+- Development/testing environments
+
+**When to use files**:
+- Production environments (recommended)
+- Secrets that rotate frequently
+- Sensitive credentials (database passwords, API keys)
+- Compliance requirements (SOC2, PCI-DSS)
+
+**Limitations**:
+- Environment variables cannot be rotated without pod restart
+- Visible in `kubectl describe pod` output
+- Visible in process listings
+- May be captured in logs or debugging output
+
+---
+
 ## Output Formats
 
 ### JSON (Default)

@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-01-18
+
+### Added
+
+- Environment variable injection via `keeper.security/inject-env-vars` annotation
+- Optional env var prefix via `keeper.security/env-prefix` annotation (e.g., `DB_LOGIN`, `DB_PASSWORD`)
+- Per-secret env var control in YAML config: `injectAsEnvVars: true` and `envPrefix` fields
+- Mixed mode support: some secrets as files, some as environment variables
+- Example 12: Environment variable injection demo
+- Security trade-offs documentation comparing env vars vs files
+
+### Changed
+
+- Webhook now supports two injection modes: files (default) and environment variables (opt-in)
+- Documentation updated with environment variable injection guide in docs/features.md
+- Documentation updated with environment variable annotations in docs/annotations.md
+
+### Security Notes
+
+Environment variables are visible in pod metadata and cannot be rotated without pod restart. File-based injection remains the recommended approach for production environments.
+
 ## [0.6.0] - 2026-01-17
 
 ### Added

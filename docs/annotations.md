@@ -110,6 +110,98 @@ Templates support 100+ functions from [Sprig](http://masterminds.github.io/sprig
 | `keeper.security/signal` | `""` | Signal to send on refresh (e.g., `"SIGHUP"`) |
 | `keeper.security/strict-lookup` | `"false"` | Fail if multiple records match title |
 
+## Environment Variable Injection Annotations
+
+**⚠️ Security Notice**: Environment variables are less secure than file-based injection. See [Security Trade-offs](#security-trade-offs) below.
+
+| Annotation | Default | Description |
+|------------|---------|-------------|
+| `keeper.security/inject-env-vars` | `"false"` | Inject secrets as environment variables instead of files |
+| `keeper.security/env-prefix` | `""` | Optional prefix for all env var names (e.g., `"DB_"`) |
+
+### Simple Usage (All Secrets as Env Vars)
+
+```yaml
+annotations:
+  keeper.security/inject: "true"
+  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/inject-env-vars: "true"
+  keeper.security/secret: "database-credentials"
+```
+
+**Result**: Environment variables injected into all containers:
+```
+LOGIN=demouser
+PASSWORD=secret123
+HOSTNAME=db.example.com
+```
+
+### With Prefix (Namespace Env Vars)
+
+```yaml
+annotations:
+  keeper.security/inject: "true"
+  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/inject-env-vars: "true"
+  keeper.security/env-prefix: "DB_"
+  keeper.security/secret: "database-credentials"
+```
+
+**Result**:
+```
+DB_LOGIN=demouser
+DB_PASSWORD=secret123
+DB_HOSTNAME=db.example.com
+```
+
+### Mixed Mode (Some as Files, Some as Env Vars)
+
+For fine-grained control, use YAML configuration:
+
+```yaml
+annotations:
+  keeper.security/inject: "true"
+  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/config: |
+    secrets:
+      - record: database-credentials
+        injectAsEnvVars: true
+        envPrefix: "DB_"
+      - record: tls-certificate
+        path: /keeper/secrets/tls.json
+        # File-based, not env vars
+```
+
+**Result**:
+- Env vars: `DB_LOGIN`, `DB_PASSWORD`, `DB_HOSTNAME`
+- File: `/keeper/secrets/tls.json`
+
+### Security Trade-offs
+
+**When to use environment variables**:
+- Legacy applications that only support env vars
+- Simple read-once patterns (not frequently rotated secrets)
+- Development/testing environments
+
+**When to use files (recommended)**:
+- Production environments
+- Secrets that rotate frequently
+- Sensitive credentials (database passwords, API keys)
+- Compliance requirements (SOC2, PCI-DSS)
+
+**Environment variable limitations**:
+- ❌ Visible in `kubectl describe pod` output
+- ❌ Visible in process listings inside containers
+- ❌ May be captured in logs or debugging output
+- ❌ Cannot be rotated without pod restart
+- ✅ Secrets never stored in etcd (not K8s Secrets)
+
+**File-based advantages**:
+- ✅ Not visible in pod metadata
+- ✅ Can be rotated without pod restart (via sidecar)
+- ✅ More secure for sensitive data
+- ✅ tmpfs storage prevents disk persistence
+
 ## Authentication Annotations
 
 ### Basic Authentication (K8s Secret)

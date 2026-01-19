@@ -1,0 +1,239 @@
+# ============================================================================
+# Environment Variable Injection - Keeper K8s Injector Demo
+# ============================================================================
+#
+# This example demonstrates injecting secrets directly as environment variables
+# instead of files. Useful for legacy applications that only support env vars.
+#
+# QUICK START:
+#   1. Update keeper.security/secret annotation below with your secret's title
+#   2. kubectl apply -f env-vars.yaml
+#   3. kubectl port-forward svc/env-vars-demo 8080:80
+#   4. Open http://localhost:8080
+#
+# WHAT'S INCLUDED:
+#   - Deployment: Web app that displays environment variables
+#   - Service: ClusterIP service for accessing the web app
+#
+# SECURITY NOTICE:
+#   Environment variables are visible in pod metadata and process listings.
+#   For production, prefer file-based injection (see example 01-hello-secrets).
+#
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Deployment: Web application that displays environment variables
+# ----------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: env-vars-demo
+  labels:
+    app: env-vars-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: env-vars-demo
+  template:
+    metadata:
+      labels:
+        app: env-vars-demo
+      annotations:
+        # Enable Keeper secret injection
+        keeper.security/inject: "true"
+
+        # Reference to your KSM auth secret
+        # Create this first: kubectl create secret generic keeper-credentials --from-literal=config='<base64-config>'
+        keeper.security/auth-secret: "keeper-credentials"
+
+        # ENABLE ENVIRONMENT VARIABLE INJECTION
+        keeper.security/inject-env-vars: "true"
+
+        # Optional: Add prefix to all env vars (e.g., DB_LOGIN, DB_PASSWORD)
+        keeper.security/env-prefix: "APP_"
+
+        # The title of your secret in Keeper
+        # CHANGE THIS to match your secret's title in Keeper
+        keeper.security/secret: "demo-secret"
+
+        # Note: Environment variables cannot be rotated without pod restart
+        # Set init-only to true since rotation doesn't work with env vars
+        keeper.security/init-only: "true"
+    spec:
+      containers:
+      - name: web
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html
+          mountPath: /usr/share/nginx/html
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Generate HTML page that shows environment variables
+          cat > /usr/share/nginx/html/index.html << 'HTMLEOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Keeper Environment Variables Demo</title>
+            <style>
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                max-width: 900px;
+                margin: 50px auto;
+                padding: 20px;
+                background: #f5f5f5;
+              }
+              .card {
+                background: white;
+                border-radius: 12px;
+                padding: 30px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                margin-bottom: 20px;
+              }
+              h1 { color: #1D2939; margin-top: 0; }
+              .env-list {
+                background: #1D2939;
+                color: #00C86C;
+                padding: 20px;
+                border-radius: 8px;
+                font-family: monospace;
+                font-size: 13px;
+                overflow-x: auto;
+                border: 2px solid #00C86C;
+                max-height: 400px;
+                overflow-y: auto;
+              }
+              .env-item {
+                padding: 5px 0;
+                border-bottom: 1px solid #333;
+              }
+              .env-key {
+                color: #00C86C;
+                font-weight: bold;
+              }
+              .env-value {
+                color: #FFF;
+                margin-left: 10px;
+              }
+              .warning {
+                background: #FFF3CD;
+                border-left: 4px solid #FFC107;
+                padding: 15px;
+                margin-top: 20px;
+                color: #856404;
+              }
+              .info {
+                background: #E6F7F0;
+                border-left: 4px solid #00C86C;
+                padding: 15px;
+                margin-top: 20px;
+              }
+              .logo {
+                font-size: 18px;
+                font-weight: 600;
+                color: #1D2939;
+                margin-bottom: 10px;
+              }
+              .logo-icon {
+                display: inline-block;
+                width: 24px;
+                height: 24px;
+                background: #00C86C;
+                border-radius: 4px;
+                text-align: center;
+                line-height: 24px;
+                color: white;
+                font-weight: bold;
+                margin-right: 8px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <div class="logo"><span class="logo-icon">K</span>Keeper Secrets Manager</div>
+              <h1>Environment Variables Demo</h1>
+              <p>This page displays secrets injected as environment variables from Keeper Secrets Manager.</p>
+
+              <h3>Environment Variables (APP_* prefix):</h3>
+              <div class="env-list">
+          HTMLEOF
+
+          # List all APP_* environment variables
+          env | grep '^APP_' | sort | while IFS='=' read -r key value; do
+            # Mask sensitive values (show first 4 chars only)
+            masked_value=$(echo "$value" | cut -c1-4)"***"
+            echo "<div class='env-item'><span class='env-key'>$key</span>=<span class='env-value'>$masked_value</span></div>" >> /usr/share/nginx/html/index.html
+          done
+
+          cat >> /usr/share/nginx/html/index.html << 'HTMLEOF'
+              </div>
+            </div>
+
+            <div class="card warning">
+              <h3>⚠️ Security Notice</h3>
+              <p><strong>Environment variables are less secure than file-based injection:</strong></p>
+              <ul>
+                <li>Visible in <code>kubectl describe pod</code> output</li>
+                <li>Visible in process listings inside containers</li>
+                <li>May be captured in logs or debugging output</li>
+                <li>Cannot be rotated without pod restart</li>
+              </ul>
+              <p><strong>Use file-based injection for production environments.</strong></p>
+            </div>
+
+            <div class="card info">
+              <h3>When to Use Environment Variables</h3>
+              <ul>
+                <li>Legacy applications that only support env vars</li>
+                <li>Simple read-once patterns (not frequently rotated secrets)</li>
+                <li>Development/testing environments</li>
+              </ul>
+              <h3>When to Use Files (Recommended)</h3>
+              <ul>
+                <li>Production environments</li>
+                <li>Secrets that rotate frequently</li>
+                <li>Sensitive credentials (database passwords, API keys)</li>
+                <li>Compliance requirements (SOC2, PCI-DSS)</li>
+              </ul>
+            </div>
+
+            <div class="card">
+              <h3>Verify Environment Variables</h3>
+              <p>You can verify the environment variables are set:</p>
+              <pre style="background: #f5f5f5; padding: 15px; border-radius: 8px;">
+kubectl exec deployment/env-vars-demo -- env | grep APP_</pre>
+              <p><strong>Note:</strong> Environment variables are set at pod creation time and cannot be rotated without restarting the pod.</p>
+            </div>
+          </body>
+          </html>
+          HTMLEOF
+
+          # Start nginx
+          nginx -g 'daemon off;'
+      volumes:
+      - name: html
+        emptyDir: {}
+
+---
+# ----------------------------------------------------------------------------
+# Service: Exposes the web application
+# ----------------------------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: env-vars-demo
+  labels:
+    app: env-vars-demo
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  selector:
+    app: env-vars-demo

@@ -221,6 +221,11 @@ func (m *PodMutator) mutatePod(ctx context.Context, pod *corev1.Pod, cfg *config
 		pod.Spec.Containers = append(pod.Spec.Containers, sidecarContainer)
 	}
 
+	// Inject environment variables (if enabled)
+	if err := m.injectEnvironmentVariables(ctx, pod, cfg); err != nil {
+		return fmt.Errorf("failed to inject environment variables: %w", err)
+	}
+
 	// Add annotation to indicate injection occurred (for GitOps compatibility)
 	if pod.Annotations == nil {
 		pod.Annotations = make(map[string]string)

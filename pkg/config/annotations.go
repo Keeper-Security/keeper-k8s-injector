@@ -33,6 +33,10 @@ const (
 	AnnotationSignal          = AnnotationPrefix + "signal"
 	AnnotationStrictLookup    = AnnotationPrefix + "strict-lookup"
 
+	// Environment variable injection annotations
+	AnnotationInjectEnvVars = AnnotationPrefix + "inject-env-vars" // Inject secrets as env vars instead of files
+	AnnotationEnvPrefix     = AnnotationPrefix + "env-prefix"      // Optional prefix for env var names (e.g., "DB_")
+
 	// CA Certificate annotations (for corporate proxies/SSL inspection)
 	AnnotationCACertSecret    = AnnotationPrefix + "ca-cert-secret"     // K8s Secret name with CA cert
 	AnnotationCACertConfigMap = AnnotationPrefix + "ca-cert-configmap"  // K8s ConfigMap name with CA cert
@@ -75,6 +79,11 @@ type SecretRef struct {
 	FileName string
 	// IsFile indicates this is a file attachment download
 	IsFile bool
+
+	// InjectAsEnvVars if true, inject as environment variables instead of files
+	InjectAsEnvVars bool
+	// EnvVarPrefix is an optional prefix for env var names (e.g., "DB_" → DB_PASSWORD)
+	EnvVarPrefix string
 }
 
 // FolderRef represents a reference to a folder in Keeper
@@ -124,6 +133,10 @@ type InjectionConfig struct {
 	GCPSecretID     string // GCP Secret Manager resource name
 	AzureVaultName  string // Azure Key Vault name
 	AzureSecretName string // Azure Key Vault secret name
+
+	// Environment variable injection configuration
+	InjectEnvVars bool   // Global flag to inject all secrets as env vars
+	EnvPrefix     string // Global prefix for all env var names
 }
 
 // ParseAnnotations extracts injection configuration from pod annotations
@@ -173,6 +186,14 @@ func ParseAnnotations(pod *corev1.Pod) (*InjectionConfig, error) {
 		config.StrictLookup = strings.ToLower(strictLookup) == "true"
 	}
 
+	// Parse environment variable injection annotations
+	if injectEnvVars, ok := annotations[AnnotationInjectEnvVars]; ok {
+		config.InjectEnvVars = strings.ToLower(injectEnvVars) == "true"
+	}
+	if envPrefix, ok := annotations[AnnotationEnvPrefix]; ok {
+		config.EnvPrefix = envPrefix
+	}
+
 	// Parse CA certificate configuration
 	if caCertSecret, ok := annotations[AnnotationCACertSecret]; ok {
 		config.CACertSecret = caCertSecret
@@ -206,9 +227,11 @@ func ParseAnnotations(pod *corev1.Pod) (*InjectionConfig, error) {
 	// Parse secrets - Level 1: Single secret
 	if secret, ok := annotations[AnnotationSecret]; ok {
 		config.Secrets = append(config.Secrets, SecretRef{
-			Name:   strings.TrimSpace(secret),
-			Path:   fmt.Sprintf("%s/%s.json", DefaultSecretsPath, sanitizeName(secret)),
-			Format: "json",
+			Name:            strings.TrimSpace(secret),
+			Path:            fmt.Sprintf("%s/%s.json", DefaultSecretsPath, sanitizeName(secret)),
+			Format:          "json",
+			InjectAsEnvVars: config.InjectEnvVars,
+			EnvVarPrefix:    config.EnvPrefix,
 		})
 	}
 
@@ -218,9 +241,11 @@ func ParseAnnotations(pod *corev1.Pod) (*InjectionConfig, error) {
 			name := strings.TrimSpace(s)
 			if name != "" {
 				config.Secrets = append(config.Secrets, SecretRef{
-					Name:   name,
-					Path:   fmt.Sprintf("%s/%s.json", DefaultSecretsPath, sanitizeName(name)),
-					Format: "json",
+					Name:            name,
+					Path:            fmt.Sprintf("%s/%s.json", DefaultSecretsPath, sanitizeName(name)),
+					Format:          "json",
+					InjectAsEnvVars: config.InjectEnvVars,
+					EnvVarPrefix:    config.EnvPrefix,
 				})
 			}
 		}
@@ -477,6 +502,10 @@ type SecretYAMLConfig struct {
 	Template string `yaml:"template,omitempty"`
 	// File is for file attachment downloads
 	File string `yaml:"file,omitempty"`
+	// InjectAsEnvVars if true, inject this secret as env vars instead of file
+	InjectAsEnvVars bool `yaml:"injectAsEnvVars,omitempty"`
+	// EnvPrefix is an optional prefix for env var names
+	EnvPrefix string `yaml:"envPrefix,omitempty"`
 }
 
 // FolderYAMLConfig represents a folder in YAML config
@@ -499,8 +528,10 @@ func parseFullConfig(configYAML string) ([]SecretRef, []FolderRef, error) {
 	var secrets []SecretRef
 	for _, s := range cfg.Secrets {
 		ref := SecretRef{
-			Format:   s.Format,
-			Template: s.Template,
+			Format:          s.Format,
+			Template:        s.Template,
+			InjectAsEnvVars: s.InjectAsEnvVars,
+			EnvVarPrefix:    s.EnvPrefix,
 		}
 
 		// Set default format
