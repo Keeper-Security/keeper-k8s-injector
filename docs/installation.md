@@ -81,8 +81,9 @@ kubectl create secret generic keeper-credentials \
 
 **⚠️ Important**: Replace `"YOUR-SECRET-TITLE"` below with an actual secret title from your Keeper Secrets Manager application. Check Keeper UI → Secrets Manager → Application → Secrets tab for available secret titles.
 
+### Create the test pod
+
 ```bash
-# Create test pod
 cat > test-pod.yaml <<'EOF'
 apiVersion: v1
 kind: Pod
@@ -98,14 +99,58 @@ spec:
       image: busybox:latest
       command: ["sleep", "3600"]
 EOF
+```
 
-# Deploy and verify
+### Deploy the pod
+
+```bash
 kubectl apply -f test-pod.yaml
-kubectl wait --for=condition=Ready pod/test-secrets --timeout=60s
-kubectl exec test-secrets -- cat /keeper/secrets/YOUR-SECRET-TITLE.json
+```
 
-# Cleanup
+**Expected output:**
+```
+pod/test-secrets created
+```
+
+### Wait for the pod to be ready
+
+```bash
+kubectl wait --for=condition=Ready pod/test-secrets --timeout=60s
+```
+
+**Expected output:**
+```
+pod/test-secrets condition met
+```
+
+### Verify the secret was injected
+
+```bash
+kubectl exec test-secrets -- cat /keeper/secrets/YOUR-SECRET-TITLE.json
+```
+
+**Expected output:**
+```
+Defaulted container "busybox" out of: busybox, keeper-secrets-sidecar, keeper-secrets-init (init)
+{
+  "login": "admin",
+  "password": "my-secure-password-123",
+  "hostname": "db.example.com",
+  "port": "5432"
+}
+```
+
+**Success!** Your secret from Keeper is now injected into the pod.
+
+### Cleanup
+
+```bash
 kubectl delete pod test-secrets
+```
+
+**Expected output:**
+```
+pod "test-secrets" deleted
 ```
 
 ## Summary

@@ -72,32 +72,40 @@ kubectl create secret generic keeper-auth \
 
 **⚠️ Important**: Replace `"YOUR-SECRET-TITLE"` with an actual secret title from your Keeper Secrets Manager application.
 
+**Create test pod:**
 ```bash
-# Create test pod
 cat > test-pod.yaml <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
   name: test-secrets
-  labels:
-    app: test-secrets
   annotations:
     keeper.security/inject: "true"
     keeper.security/auth-secret: "keeper-auth"
-    keeper.security/secret: "YOUR-SECRET-TITLE"  # ← CHANGE THIS to your actual secret title
+    keeper.security/secret: "YOUR-SECRET-TITLE"
 spec:
   containers:
     - name: busybox
       image: busybox:latest
       command: ["sleep", "3600"]
 EOF
+```
 
-# Deploy and verify
+**Deploy and verify:**
+```bash
 kubectl apply -f test-pod.yaml
-kubectl wait --for=condition=Ready pod/test-secrets --timeout=60s
-kubectl exec test-secrets -- cat /keeper/secrets/YOUR-SECRET-TITLE.json
+# pod/test-secrets created
 
-# Cleanup
+kubectl wait --for=condition=Ready pod/test-secrets --timeout=60s
+# pod/test-secrets condition met
+
+kubectl exec test-secrets -- cat /keeper/secrets/YOUR-SECRET-TITLE.json
+# {
+#   "login": "admin",
+#   "password": "my-secure-password-123",
+#   "hostname": "db.example.com"
+# }
+
 kubectl delete pod test-secrets
 ```
 
