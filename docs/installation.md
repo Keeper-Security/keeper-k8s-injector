@@ -82,53 +82,30 @@ kubectl create secret generic keeper-credentials \
 **⚠️ Important**: Replace `"YOUR-SECRET-TITLE"` below with an actual secret title from your Keeper Secrets Manager application. Check Keeper UI → Secrets Manager → Application → Secrets tab for available secret titles.
 
 ```bash
-# Create the test pod YAML file
+# Create test pod
 cat > test-pod.yaml <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
   name: test-secrets
-  labels:
-    app: test-secrets
   annotations:
     keeper.security/inject: "true"
     keeper.security/auth-secret: "keeper-credentials"
     keeper.security/secret: "YOUR-SECRET-TITLE"  # ← CHANGE THIS to your actual secret title
 spec:
   containers:
-    - name: nginx
-      image: nginx:alpine
-      command: ["/bin/sh", "-c"]
-      args:
-        - |
-          echo '<h1>Secret Injected Successfully!</h1><pre>' > /usr/share/nginx/html/index.html
-          cat /keeper/secrets/YOUR-SECRET-TITLE.json >> /usr/share/nginx/html/index.html
-          echo '</pre>' >> /usr/share/nginx/html/index.html
-          nginx -g 'daemon off;'
+    - name: busybox
+      image: busybox:latest
+      command: ["sleep", "3600"]
 EOF
 
-# Deploy the pod
+# Deploy and verify
 kubectl apply -f test-pod.yaml
-
-# Wait for pod to be ready
 kubectl wait --for=condition=Ready pod/test-secrets --timeout=60s
-
-# Option 1: View in browser (local Kubernetes)
-kubectl port-forward pod/test-secrets 8080:80
-# Open http://localhost:8080 to see your secret!
-
-# Option 2: View in browser (Killercoda/remote cluster)
-kubectl expose pod test-secrets --type=NodePort --port=80 --name=test-secrets-svc
-kubectl get svc test-secrets-svc
-# Note the NodePort (30000-32767 range)
-# In Killercoda: Click ☰ menu → Traffic/Ports → Enter the NodePort → Access
-
-# Option 3: Check via command line
 kubectl exec test-secrets -- cat /keeper/secrets/YOUR-SECRET-TITLE.json
 
-# Cleanup when done
+# Cleanup
 kubectl delete pod test-secrets
-kubectl delete svc test-secrets-svc 2>/dev/null || true
 ```
 
 ## Summary
