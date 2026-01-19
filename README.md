@@ -73,14 +73,15 @@ kubectl create secret generic keeper-auth \
 **No files needed - just run this:**
 
 ```bash
+# Create test pod
 kubectl run test-secrets --image=busybox:latest --restart=Never \
   --annotations="keeper.security/inject=true,keeper.security/auth-secret=keeper-auth,keeper.security/secret=database-credentials" \
-  -- sh -c "cat /keeper/secrets/database-credentials.json && sleep 3600"
+  -- sleep 3600
 
-# Check logs to see your secret
-kubectl logs test-secrets
+# Wait for pod to be ready (init container injects the secret)
+kubectl wait --for=condition=Ready pod/test-secrets --timeout=60s
 
-# Or exec into the pod
+# View the injected secret
 kubectl exec test-secrets -- cat /keeper/secrets/database-credentials.json
 
 # Cleanup
