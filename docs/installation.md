@@ -79,6 +79,8 @@ kubectl create secret generic keeper-credentials \
 
 ## Step 3: Create Test Pod
 
+**⚠️ Important**: Replace `"YOUR-SECRET-TITLE"` below with an actual secret title from your Keeper Secrets Manager application. Check Keeper UI → Secrets Manager → Application → Secrets tab for available secret titles.
+
 ```bash
 # Create the test pod YAML file
 cat > test-pod.yaml <<'EOF'
@@ -89,7 +91,7 @@ metadata:
   annotations:
     keeper.security/inject: "true"
     keeper.security/auth-secret: "keeper-credentials"
-    keeper.security/secret: "my-database-credentials"  # ← Use any secret title from your KSM
+    keeper.security/secret: "YOUR-SECRET-TITLE"  # ← CHANGE THIS to your actual secret title
 spec:
   containers:
     - name: nginx
@@ -98,7 +100,7 @@ spec:
       args:
         - |
           echo '<h1>Secret Injected Successfully!</h1><pre>' > /usr/share/nginx/html/index.html
-          cat /keeper/secrets/my-database-credentials.json >> /usr/share/nginx/html/index.html
+          cat /keeper/secrets/YOUR-SECRET-TITLE.json >> /usr/share/nginx/html/index.html
           echo '</pre>' >> /usr/share/nginx/html/index.html
           nginx -g 'daemon off;'
 EOF

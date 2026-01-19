@@ -2,6 +2,54 @@
 
 ## Common Issues
 
+### Pod stuck in CrashLoopBackOff or Pending
+
+**Symptom**: Pod never becomes Ready, `kubectl wait` times out
+
+**Check init container logs**:
+```bash
+kubectl logs YOUR-POD -c keeper-secrets-init --previous
+```
+
+**Common errors and solutions**:
+
+#### Error: "403 Forbidden - access_denied"
+```
+Error: 403 Forbidden
+Message: Unable to validate Keeper application access
+```
+
+**Cause**: Your KSM config in the `keeper-credentials` secret is invalid, expired, or revoked.
+
+**Solution**:
+1. Generate a new KSM device config in Keeper:
+   - Go to Keeper Vault → Secrets Manager → Your Application
+   - Devices tab → Add Device → Configuration File → Base64
+   - Copy the base64 string
+
+2. Update the Kubernetes secret:
+   ```bash
+   kubectl delete secret keeper-credentials
+   kubectl create secret generic keeper-credentials \
+     --from-literal=config='<paste-new-base64-config-here>'
+   ```
+
+3. Delete and recreate your pod:
+   ```bash
+   kubectl delete pod YOUR-POD
+   kubectl apply -f your-pod.yaml
+   ```
+
+#### Error: "no record found with title: my-secret"
+
+**Cause**: The secret name in your annotation doesn't exist in KSM, or your KSM application doesn't have access to it.
+
+**Solution**:
+1. Verify the secret title exists in Keeper (case-sensitive)
+2. Check your KSM application has access to the secret (Keeper UI → Secrets Manager → Application → Secrets tab)
+3. Use the exact title as shown in Keeper
+4. Or use the record UID instead: `keeper.security/secret: "ABC123def456ghi789"`
+
 ### My secrets aren't appearing
 
 **Check 1: Is injection enabled?**
