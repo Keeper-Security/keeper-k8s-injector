@@ -327,12 +327,32 @@ func (a *Agent) fetchSecretsFromFolder(ctx context.Context, cfg FolderConfig) (i
 		zap.String("folderPath", cfg.FolderPath),
 		zap.String("outputPath", cfg.OutputPath))
 
-	// Get secrets from folder by UID
-	if cfg.FolderUID == "" {
-		return 0, fmt.Errorf("folder UID is required (folder path lookup not yet implemented)")
+	// Resolve folder UID from path if needed
+	folderUID := cfg.FolderUID
+	if folderUID == "" && cfg.FolderPath != "" {
+		// Build folder tree to resolve path
+		tree, err := a.ksmClient.BuildFolderTree(ctx)
+		if err != nil {
+			return 0, fmt.Errorf("failed to build folder tree: %w", err)
+		}
+
+		// Resolve folder path to UID
+		resolvedUID, err := tree.ResolvePath(cfg.FolderPath)
+		if err != nil {
+			return 0, fmt.Errorf("failed to resolve folder path '%s': %w", cfg.FolderPath, err)
+		}
+
+		folderUID = resolvedUID
+		a.logger.Debug("resolved folder path to UID",
+			zap.String("folderPath", cfg.FolderPath),
+			zap.String("folderUID", folderUID))
 	}
 
-	secrets, err := a.ksmClient.GetSecretsInFolder(ctx, cfg.FolderUID)
+	if folderUID == "" {
+		return 0, fmt.Errorf("either folderUid or folderPath must be specified")
+	}
+
+	secrets, err := a.ksmClient.GetSecretsInFolder(ctx, folderUID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get secrets from folder: %w", err)
 	}

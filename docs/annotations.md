@@ -375,6 +375,54 @@ The Keeper notation format is: `keeper://RECORD_UID/TYPE/SELECTOR`
 | `file` | filename | Download a file attachment |
 | `custom_field` | field label | Extract custom field by label |
 
+### Folder Path Notation
+
+You can now use folder paths in Keeper notation to reference secrets by their location:
+
+**Format:** `keeper://FOLDER_PATH/RECORD_NAME/TYPE/SELECTOR:OUTPUT_PATH`
+
+**Examples:**
+
+```yaml
+annotations:
+  keeper.security/inject: "true"
+  keeper.security/auth-secret: "keeper-auth"
+
+  # Reference secret by folder path + title
+  keeper.security/secret-db-pass: "keeper://Production/Databases/mysql-credentials/field/password:/app/secrets/db-pass"
+
+  # Without keeper:// prefix
+  keeper.security/secret-api-key: "Dev/APIs/stripe-api/field/api_key:/app/secrets/api-key"
+
+  # Nested folders
+  keeper.security/secret-cert: "Production/Region/US-East/Databases/postgres/field/certificate:/app/certs/cert.pem"
+```
+
+**Benefits:**
+- More readable than UIDs
+- Easier to maintain and understand
+- Folder structure provides context
+- Case-sensitive matching for precision
+
+**Examples with different selectors:**
+
+```yaml
+# Extract entire record
+keeper.security/secret-full: "Production/Databases/mysql-creds:/app/secrets/mysql.json"
+
+# Extract specific field
+keeper.security/secret-password: "Production/Databases/mysql-creds/field/password:/app/secrets/db-pass"
+
+# Extract custom field
+keeper.security/secret-token: "Dev/APIs/stripe/custom_field/api_token:/app/secrets/token"
+
+# Get record type
+keeper.security/secret-type: "Production/Databases/mysql-creds/type:/app/metadata/type.txt"
+
+# Get record title
+keeper.security/secret-title: "Production/Databases/mysql-creds/title:/app/metadata/title.txt"
+```
+
 ## File Attachments
 
 Download file attachments from Keeper records:
@@ -396,7 +444,7 @@ Result:
 
 Fetch all secrets from a Keeper folder:
 
-### By Folder UID (Recommended)
+### By Folder UID
 
 ```yaml
 annotations:
@@ -408,17 +456,21 @@ annotations:
 
 Result: All secrets in the folder are written as JSON files to `/app/folder-secrets/`
 
-### By Folder Path (Coming Soon)
+### By Folder Path
+
+You can now reference folders by their path instead of UID:
 
 ```yaml
 annotations:
   keeper.security/inject: "true"
   keeper.security/auth-secret: "keeper-auth"
-  keeper.security/folder: "Production/Databases"
-  keeper.security/folder-path: "/app/db-secrets"
+  keeper.security/folder: "Production/Databases"  # Folder path
+  keeper.security/folder-path: "/app/db-secrets"  # Output directory
 ```
 
-> **Note:** Folder path lookup is not yet implemented. Use `folder-uid` for now.
+Result: All secrets in the `Production/Databases` folder are written to `/app/db-secrets/`
+
+Folder paths are case-sensitive and must match the exact folder names in your Keeper vault.
 
 ## Complete Example
 

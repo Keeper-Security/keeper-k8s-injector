@@ -52,13 +52,61 @@ Downloads file attachments from Keeper records.
 
 ### 6. Folder Support
 
+Fetch all secrets from a Keeper folder using either UID or path:
+
+**By Folder UID:**
 ```yaml
 annotations:
   keeper.security/folder-uid: "FOLDER_UID_HERE"
   keeper.security/folder-path: "/app/folder-secrets"
 ```
 
-Fetches all secrets from a Keeper folder.
+**By Folder Path:**
+```yaml
+annotations:
+  keeper.security/folder: "Production/Databases"
+  keeper.security/folder-path: "/app/db-secrets"
+```
+
+Result: All secrets in the folder are written as JSON files to the specified output directory.
+
+### 7. Folder Path Notation
+
+Reference individual secrets using their folder path location:
+
+**Format:** `keeper://FOLDER_PATH/RECORD_NAME/TYPE/SELECTOR:OUTPUT_PATH`
+
+**Examples:**
+
+```yaml
+annotations:
+  keeper.security/inject: "true"
+  keeper.security/auth-secret: "keeper-auth"
+
+  # Extract field from record in folder
+  keeper.security/secret-db-pass: "Production/Databases/mysql-prod/field/password:/app/secrets/db-pass"
+
+  # Get entire record from folder
+  keeper.security/secret-api: "Dev/APIs/stripe-api:/app/secrets/stripe.json"
+
+  # Nested folder path
+  keeper.security/secret-cert: "Production/Region/US-East/Database/postgres/field/certificate:/app/certs/cert.pem"
+```
+
+**Benefits:**
+- **Readable**: Folder paths are more intuitive than 22-character UIDs
+- **Maintainable**: Easier to understand secret locations
+- **Contextual**: Folder structure provides organizational context
+- **Precise**: Case-sensitive matching ensures accuracy
+
+**Supported selectors:**
+- `field/<fieldname>` - Extract specific field
+- `custom_field/<label>` - Extract custom field
+- `file/<filename>` - Download file attachment
+- `type` - Get record type
+- `title` - Get record title
+- `notes` - Get notes field
+- (no selector) - Get entire record as JSON
 
 ---
 

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 
 	ksm "github.com/keeper-security/secrets-manager-go/core"
@@ -380,6 +381,7 @@ func (c *Client) ListSecrets(ctx context.Context) ([]*SecretData, error) {
 
 // GetNotation retrieves data using Keeper notation format
 // Notation format: keeper://UID/field/password or UID/field/password
+// Now supports folder paths: keeper://Production/Databases/mysql/field/password
 // Supports: field, custom_field, file, type, title, notes
 func (c *Client) GetNotation(ctx context.Context, notation string) ([]byte, error) {
 	c.mu.RLock()
@@ -387,7 +389,128 @@ func (c *Client) GetNotation(ctx context.Context, notation string) ([]byte, erro
 
 	c.logger.Debug("fetching by notation", zap.String("notation", notation))
 
-	// Use SDK's GetNotationResults which returns []string
+	// Try to parse as folder path notation
+	np := parseNotationPath(notation)
+	if np != nil && np.folderPath != "" {
+		// This is a folder path notation - handle it specially
+		c.logger.Debug("detected folder path in notation",
+			zap.String("folderPath", np.folderPath),
+			zap.String("recordName", np.recordName),
+			zap.String("selector", np.selector),
+			zap.String("parameter", np.parameter))
+
+		// Get record by folder path
+		folders, err := c.sm.GetFolders()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get folders: %w", err)
+		}
+		tree := BuildFolderTree(folders)
+
+		folderUID, err := tree.ResolvePath(np.folderPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve folder path '%s': %w", np.folderPath, err)
+		}
+
+		// Find record in folder
+		records, err := c.sm.GetSecrets([]string{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get secrets: %w", err)
+		}
+
+		var matchedRecord *ksm.Record
+		for _, record := range records {
+			if (record.FolderUid() == folderUID || record.InnerFolderUid() == folderUID) &&
+				(record.Title() == np.recordName || record.Uid == np.recordName) {
+				matchedRecord = record
+				break
+			}
+		}
+
+		if matchedRecord == nil {
+			return nil, fmt.Errorf("no record found with name '%s' in folder path '%s'", np.recordName, np.folderPath)
+		}
+
+		// If no selector, return entire record as JSON
+		if np.selector == "" {
+			secretData, err := c.recordToSecretData(matchedRecord)
+			if err != nil {
+				return nil, err
+			}
+			return json.Marshal(secretData)
+		}
+
+		// Apply selector to extract specific field
+		switch np.selector {
+		case "field":
+			if np.parameter == "" {
+				return nil, fmt.Errorf("field selector requires parameter (e.g., /field/password)")
+			}
+			// Use SDK's GetValue method on the record directly
+			if val := matchedRecord.GetFieldValueByType(np.parameter); val != "" {
+				return []byte(val), nil
+			}
+			// Try custom fields
+			secretData, err := c.recordToSecretData(matchedRecord)
+			if err != nil {
+				return nil, err
+			}
+			if val, ok := secretData.Fields[np.parameter]; ok {
+				if strVal, ok := val.(string); ok {
+					return []byte(strVal), nil
+				}
+				return json.Marshal(val)
+			}
+			return nil, fmt.Errorf("field '%s' not found in record", np.parameter)
+
+		case "custom_field":
+			if np.parameter == "" {
+				return nil, fmt.Errorf("custom_field selector requires parameter")
+			}
+			secretData, err := c.recordToSecretData(matchedRecord)
+			if err != nil {
+				return nil, err
+			}
+			if val, ok := secretData.Fields[np.parameter]; ok {
+				if strVal, ok := val.(string); ok {
+					return []byte(strVal), nil
+				}
+				return json.Marshal(val)
+			}
+			return nil, fmt.Errorf("custom field '%s' not found in record", np.parameter)
+
+		case "file":
+			if np.parameter == "" {
+				return nil, fmt.Errorf("file selector requires parameter (filename)")
+			}
+			for _, f := range matchedRecord.Files {
+				if f.Name == np.parameter || f.Title == np.parameter {
+					data := f.GetFileData()
+					if data == nil {
+						return nil, fmt.Errorf("failed to get file data for %s", np.parameter)
+					}
+					return data, nil
+				}
+			}
+			return nil, fmt.Errorf("file '%s' not found in record", np.parameter)
+
+		case "type":
+			return []byte(matchedRecord.Type()), nil
+
+		case "title":
+			return []byte(matchedRecord.Title()), nil
+
+		case "notes":
+			if notes := matchedRecord.GetFieldValueByType("note"); notes != "" {
+				return []byte(notes), nil
+			}
+			return []byte{}, nil
+
+		default:
+			return nil, fmt.Errorf("unknown selector: %s", np.selector)
+		}
+	}
+
+	// Not a folder path notation - use original SDK method
 	results, err := c.sm.GetNotationResults(notation)
 	if err != nil {
 		return nil, fmt.Errorf("notation query failed: %w", err)
@@ -439,6 +562,7 @@ func (c *Client) GetFolders(ctx context.Context) ([]FolderInfo, error) {
 		result = append(result, FolderInfo{
 			UID:       f.FolderUid,
 			ParentUID: f.ParentUid,
+			Name:      f.Name,
 		})
 	}
 
@@ -472,6 +596,179 @@ func (c *Client) GetSecretsInFolder(ctx context.Context, folderUID string) ([]*S
 	}
 
 	return secrets, nil
+}
+
+// BuildFolderTree fetches all folders and builds a hierarchical tree
+func (c *Client) BuildFolderTree(ctx context.Context) (*FolderTree, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	c.logger.Debug("building folder tree")
+
+	folders, err := c.sm.GetFolders()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get folders: %w", err)
+	}
+
+	return BuildFolderTree(folders), nil
+}
+
+// GetSecretByPath retrieves a secret using folder path and record name
+// Example: GetSecretByPath(ctx, "Production/Databases", "mysql-creds")
+func (c *Client) GetSecretByPath(ctx context.Context, folderPath, recordName string) (*SecretData, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	c.logger.Debug("fetching secret by path",
+		zap.String("folderPath", folderPath),
+		zap.String("recordName", recordName))
+
+	// Build folder tree
+	folders, err := c.sm.GetFolders()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get folders: %w", err)
+	}
+	tree := BuildFolderTree(folders)
+
+	// Resolve folder path to UID
+	folderUID, err := tree.ResolvePath(folderPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve folder path: %w", err)
+	}
+
+	// Get all secrets in the folder
+	records, err := c.sm.GetSecrets([]string{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get secrets: %w", err)
+	}
+
+	// Filter records by folder and find matching record
+	var matches []*ksm.Record
+	for _, record := range records {
+		// Check if record is in the target folder
+		if record.FolderUid() == folderUID || record.InnerFolderUid() == folderUID {
+			// Check if record matches by title or UID
+			if record.Title() == recordName || record.Uid == recordName {
+				matches = append(matches, record)
+			}
+		}
+	}
+
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("no record found with name '%s' in folder path '%s'", recordName, folderPath)
+	}
+
+	if len(matches) > 1 && c.strictMatch {
+		return nil, fmt.Errorf("multiple records (%d) found with name '%s' in folder '%s' (strict mode enabled)", len(matches), recordName, folderPath)
+	}
+
+	if len(matches) > 1 {
+		c.logger.Warn("multiple records match in folder, using first match",
+			zap.String("recordName", recordName),
+			zap.String("folderPath", folderPath),
+			zap.Int("count", len(matches)))
+	}
+
+	return c.recordToSecretData(matches[0])
+}
+
+// notationParts represents parsed notation components
+type notationParts struct {
+	folderPath   string // Folder path (e.g., "Production/Databases")
+	recordName   string // Record title or UID
+	selector     string // "field", "custom_field", "file", "type", "title", "notes"
+	parameter    string // Parameter for selector (e.g., "password" for field)
+	hasKeeperURI bool   // Whether notation starts with "keeper://"
+}
+
+// parseNotationPath parses a notation string and detects folder paths
+// Returns nil if the notation doesn't contain a folder path
+func parseNotationPath(notation string) *notationParts {
+	// Strip keeper:// prefix if present
+	hasPrefix := false
+	if strings.HasPrefix(notation, "keeper://") {
+		notation = strings.TrimPrefix(notation, "keeper://")
+		hasPrefix = true
+	}
+
+	// Trim leading and trailing slashes
+	notation = strings.Trim(notation, "/")
+
+	// Split by / and filter out empty parts
+	rawParts := strings.Split(notation, "/")
+	var parts []string
+	for _, p := range rawParts {
+		if p != "" {
+			parts = append(parts, p)
+		}
+	}
+
+	if len(parts) < 2 {
+		// Not enough parts for folder path + record
+		return nil
+	}
+
+	// Look for selector keywords to identify where record name ends
+	selectorKeywords := []string{"field", "custom_field", "file", "type", "title", "notes"}
+	selectorIndex := -1
+	for i, part := range parts {
+		for _, keyword := range selectorKeywords {
+			if part == keyword {
+				selectorIndex = i
+				break
+			}
+		}
+		if selectorIndex != -1 {
+			break
+		}
+	}
+
+	// If no selector found, check if last part looks like a UID
+	// In that case, the entire path might be folder path + UID
+	if selectorIndex == -1 {
+		// Notation like "Production/Databases/ABC123XYZ" (folder path + UID)
+		// or "Production/Databases/record-title" (folder path + title)
+		if len(parts) >= 2 {
+			// Last part is record name, everything before is folder path
+			recordName := parts[len(parts)-1]
+			folderPath := strings.Join(parts[:len(parts)-1], "/")
+			return &notationParts{
+				folderPath:   folderPath,
+				recordName:   recordName,
+				selector:     "",
+				parameter:    "",
+				hasKeeperURI: hasPrefix,
+			}
+		}
+		return nil
+	}
+
+	// Selector found - everything before selector is folder path + record
+	if selectorIndex < 2 {
+		// Not enough parts for folder path (need at least folder + record + selector)
+		return nil
+	}
+
+	// Parse: [folder.../record]/selector[/parameter]
+	recordName := parts[selectorIndex-1]
+	folderPath := ""
+	if selectorIndex > 1 {
+		folderPath = strings.Join(parts[:selectorIndex-1], "/")
+	}
+
+	np := &notationParts{
+		folderPath:   folderPath,
+		recordName:   recordName,
+		selector:     parts[selectorIndex],
+		hasKeeperURI: hasPrefix,
+	}
+
+	// Get parameter if present
+	if len(parts) > selectorIndex+1 {
+		np.parameter = parts[selectorIndex+1]
+	}
+
+	return np
 }
 
 // Close releases any resources held by the client

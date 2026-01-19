@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-01-18
+
+### Added
+
+- **Folder Path Support**: Reference secrets using folder paths instead of UIDs
+  - New notation format: `keeper://Folder/Path/Record/field/password`
+  - Works with all annotation types (simple, YAML, notation, templates)
+  - Automatic folder tree building and path resolution
+  - Support for nested folder hierarchies
+- Folder path resolution for `keeper.security/folder` annotation
+- Case-sensitive folder matching for precision
+- Example 13: Folder-based secret lookup demo with comprehensive documentation
+
+### Changed
+
+- Folder annotation now supports both `folder-uid` and `folder` (path-based) lookups
+- KSM client extended with `BuildFolderTree()` and `GetSecretByPath()` methods
+- Notation parser now detects and resolves folder paths automatically
+- Sidecar agent updated to resolve folder paths when fetching secrets
+- Documentation updated with folder path notation in docs/annotations.md
+- Features documentation enhanced with folder-based references in docs/features.md
+
+### Implementation Details
+
+- New `pkg/ksm/folder_tree.go`: Hierarchical folder tree implementation
+- Updated `pkg/ksm/client.go`: Added `parseNotationPath()` for folder path parsing
+- Updated `pkg/sidecar/agent.go`: Folder path resolution in `fetchSecretsFromFolder()`
+- Comprehensive unit tests for folder tree operations and notation parsing
+- Integration tests with real Keeper vault demonstrating folder path functionality
+
+### Backward Compatibility
+
+Fully backward compatible with existing configurations:
+- UID-based lookups continue to work unchanged
+- Title-based lookups continue to work unchanged
+- Existing notation syntax remains supported
+- Folder path support is additive only
+
 ## [0.7.0] - 2026-01-18
 
 ### Added

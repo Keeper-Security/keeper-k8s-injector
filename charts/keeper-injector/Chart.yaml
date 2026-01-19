@@ -2,8 +2,8 @@ apiVersion: v2
 name: keeper-injector
 description: Keeper Secrets Manager Kubernetes Injector - Inject secrets into pods at runtime
 type: application
-version: 0.7.0
-appVersion: "0.7.0"
+version: 0.8.0
+appVersion: "0.8.0"
 kubeVersion: ">=1.21.0-0"
 home: https://www.keepersecurity.com
 icon: https://keepersecurity.com/vault/images/keeper_icons/icon_rounded_256.png
@@ -35,8 +35,14 @@ annotations:
       url: https://github.com/Keeper-Security/keeper-k8s-injector/issues
   artifacthub.io/changes: |
     - kind: added
-      description: Environment variable injection via keeper.security/inject-env-vars annotation
+      description: Folder path support for referencing secrets by location (e.g., keeper://Production/Databases/mysql/field/password)
     - kind: added
-      description: Optional env var prefix via keeper.security/env-prefix annotation
+      description: Automatic folder tree building and path resolution for nested hierarchies
     - kind: added
-      description: Example 12 demonstrating environment variable injection with security trade-offs
+      description: Folder path resolution for keeper.security/folder annotation (supports both path and UID)
+    - kind: added
+      description: Example 13 demonstrating folder-based secret lookup with comprehensive documentation
+    - kind: changed
+      description: KSM client extended with BuildFolderTree() and GetSecretByPath() methods
+    - kind: changed
+      description: Notation parser now detects and resolves folder paths automatically

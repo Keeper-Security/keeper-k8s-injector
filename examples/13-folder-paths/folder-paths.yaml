@@ -1,0 +1,162 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: folder-demo
+  labels:
+    keeper.security/inject: enabled
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: folder-demo
+  namespace: folder-demo
+  labels:
+    app: folder-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: folder-demo
+  template:
+    metadata:
+      labels:
+        app: folder-demo
+      annotations:
+        # Enable injection
+        keeper.security/inject: "true"
+        keeper.security/auth-secret: "keeper-credentials"
+
+        # Production database password (field extraction)
+        keeper.security/secret-prod-db-pass: "Production/Databases/mysql-prod/field/password:/keeper/secrets/prod-db-password.txt"
+
+        # Development database (entire record as JSON)
+        keeper.security/secret-dev-db-full: "Development/Databases/mysql-dev:/keeper/secrets/dev-db-full.json"
+
+        # Production API key (field extraction)
+        keeper.security/secret-api-key: "Production/APIs/stripe-api/field/api_key:/keeper/secrets/api-key.txt"
+
+        # Production Postgres username (field extraction)
+        keeper.security/secret-prod-username: "Production/Databases/postgres-prod/field/username:/keeper/secrets/prod-username.txt"
+
+        # Using keeper:// prefix (also works)
+        keeper.security/secret-dev-api: "keeper://Development/APIs/test-api/field/api_key:/keeper/secrets/dev-api-key.txt"
+
+        # Get record metadata
+        keeper.security/secret-record-type: "Production/Databases/mysql-prod/type:/keeper/secrets/record-type.txt"
+
+        # Sidecar configuration
+        keeper.security/init-only: "false"             # Enable sidecar mode for automatic rotation
+        keeper.security/refresh-interval: "1m"          # Check for updates every minute
+        keeper.security/signal: "SIGHUP"                # Send SIGHUP to main container on refresh
+        keeper.security/fail-on-error: "true"           # Fail if secret fetch fails
+
+    spec:
+      # Mount secrets directory
+      volumes:
+        - name: keeper-secrets
+          emptyDir:
+            medium: Memory
+
+      containers:
+        - name: app
+          image: busybox:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Folder Path Demo Starting..."
+              echo ""
+              echo "================================================"
+              echo "Listing all injected secrets:"
+              echo "================================================"
+              ls -lh /keeper/secrets/
+              echo ""
+              echo "================================================"
+              echo "Production DB Password (field extraction):"
+              echo "================================================"
+              cat /keeper/secrets/prod-db-password.txt
+              echo ""
+              echo ""
+              echo "================================================"
+              echo "Development DB Full Record (JSON):"
+              echo "================================================"
+              cat /keeper/secrets/dev-db-full.json | head -20
+              echo ""
+              echo ""
+              echo "================================================"
+              echo "Production API Key:"
+              echo "================================================"
+              cat /keeper/secrets/api-key.txt
+              echo ""
+              echo ""
+              echo "================================================"
+              echo "Record Type Metadata:"
+              echo "================================================"
+              cat /keeper/secrets/record-type.txt
+              echo ""
+              echo ""
+              echo "================================================"
+              echo "Waiting for secret rotation..."
+              echo "Change a secret in Keeper and watch this update!"
+              echo "================================================"
+
+              # Keep container running and display secret updates
+              while true; do
+                echo ""
+                echo "[$(date)] Checking secrets..."
+                echo "  Prod DB Password: $(cat /keeper/secrets/prod-db-password.txt 2>/dev/null | head -c 20)..."
+                echo "  API Key: $(cat /keeper/secrets/api-key.txt 2>/dev/null | head -c 20)..."
+                sleep 30
+              done
+
+          volumeMounts:
+            - name: keeper-secrets
+              mountPath: /keeper/secrets
+              readOnly: true
+
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+
+---
+# Create the KSM auth secret (you'll need to populate this with your config)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keeper-credentials
+  namespace: folder-demo
+type: Opaque
+stringData:
+  # Replace this with your actual base64-encoded KSM config
+  config: |
+    REPLACE_ME_WITH_YOUR_BASE64_CONFIG
+
+    # To get your KSM config:
+    # 1. Log into Keeper Vault
+    # 2. Go to: Vault → Secrets Manager → Select Application
+    # 3. Ensure your shared folders (Production, Development) are accessible
+    # 4. Go to Devices tab → Add Device
+    # 5. Select "Configuration File" method and "Base64" type
+    # 6. Copy and paste the base64 string here
+
+---
+# Optional: Service for exposing the demo (if needed)
+apiVersion: v1
+kind: Service
+metadata:
+  name: folder-demo
+  namespace: folder-demo
+spec:
+  selector:
+    app: folder-demo
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
