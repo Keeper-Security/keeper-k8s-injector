@@ -68,27 +68,7 @@ kubectl create secret generic keeper-auth \
   --namespace default
 ```
 
-### 2. Try It - Quick One-Liner
-
-**No files needed - just run this:**
-
-```bash
-# Create test pod
-kubectl run test-secrets --image=busybox:latest --restart=Never \
-  --annotations="keeper.security/inject=true,keeper.security/auth-secret=keeper-auth,keeper.security/secret=database-credentials" \
-  -- sleep 3600
-
-# Wait for pod to be ready (init container injects the secret)
-kubectl wait --for=condition=Ready pod/test-secrets --timeout=60s
-
-# View the injected secret
-kubectl exec test-secrets -- cat /keeper/secrets/database-credentials.json
-
-# Cleanup
-kubectl delete pod test-secrets
-```
-
-**Or create a test pod with visual confirmation:**
+### 2. Create a Test Pod
 
 ```bash
 # Create the test pod YAML file
@@ -114,24 +94,19 @@ spec:
           nginx -g 'daemon off;'
 EOF
 
-# Deploy the pod
+# Deploy it
 kubectl apply -f test-pod.yaml
 
-# Wait for pod to be ready
+# Wait for ready
 kubectl wait --for=condition=Ready pod/test-secrets --timeout=60s
 
-# View the injected secret
+# View in browser
 kubectl port-forward pod/test-secrets 8080:80
-# Open http://localhost:8080 - you'll see your secret content!
-
-# Or check via command line
-kubectl exec test-secrets -- cat /keeper/secrets/database-credentials.json
+# Open http://localhost:8080 to see your secret!
 
 # Cleanup
 kubectl delete pod test-secrets
 ```
-
-Secrets are available at `/keeper/secrets/<secret-title>.json` in your pods.
 
 ## Examples
 

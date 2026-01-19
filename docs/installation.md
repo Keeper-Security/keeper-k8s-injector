@@ -77,31 +77,7 @@ kubectl create secret generic keeper-credentials \
   -n default
 ```
 
-## Step 3: Test Secret Injection
-
-### Quick Test (No Files Needed)
-
-Run these commands to verify secrets are injected:
-
-```bash
-# Create test pod
-kubectl run test-secrets --image=busybox:latest --restart=Never \
-  --annotations="keeper.security/inject=true,keeper.security/auth-secret=keeper-credentials,keeper.security/secret=my-database-credentials" \
-  -- sleep 3600
-
-# Wait for pod to be ready (init container injects the secret)
-kubectl wait --for=condition=Ready pod/test-secrets --timeout=60s
-
-# View the injected secret
-kubectl exec test-secrets -- cat /keeper/secrets/my-database-credentials.json
-
-# Cleanup
-kubectl delete pod test-secrets
-```
-
-### Full Example with Visual Confirmation
-
-For a nicer demo with browser display, create this test pod:
+## Step 3: Create Test Pod
 
 ```bash
 # Create the test pod YAML file
