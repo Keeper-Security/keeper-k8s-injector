@@ -103,7 +103,9 @@ kubectl delete pod test-secrets
 
 For a nicer demo with browser display, create this test pod:
 
-```yaml
+```bash
+# Create the test pod YAML file
+cat > test-pod.yaml <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -123,22 +125,19 @@ spec:
           cat /keeper/secrets/my-database-credentials.json >> /usr/share/nginx/html/index.html
           echo '</pre>' >> /usr/share/nginx/html/index.html
           nginx -g 'daemon off;'
-```
+EOF
 
-## Step 4: Deploy and Verify
-
-```bash
-# Save the YAML above as test-pod.yaml and apply it
+# Deploy the pod
 kubectl apply -f test-pod.yaml
 
 # Wait for pod to be ready
 kubectl wait --for=condition=Ready pod/test-secrets --timeout=60s
 
-# Option 1: View in browser
+# View in browser
 kubectl port-forward pod/test-secrets 8080:80
 # Open http://localhost:8080 to see your secret!
 
-# Option 2: Check via command line
+# Or check via command line
 kubectl exec test-secrets -- cat /keeper/secrets/my-database-credentials.json
 
 # Cleanup when done

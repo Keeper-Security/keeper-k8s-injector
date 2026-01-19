@@ -90,7 +90,9 @@ kubectl delete pod test-secrets
 
 **Or create a test pod with visual confirmation:**
 
-```yaml
+```bash
+# Create the test pod YAML file
+cat > test-pod.yaml <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -110,11 +112,9 @@ spec:
           cat /keeper/secrets/database-credentials.json >> /usr/share/nginx/html/index.html
           echo '</pre>' >> /usr/share/nginx/html/index.html
           nginx -g 'daemon off;'
-```
+EOF
 
-**Deploy and verify:**
-
-```bash
+# Deploy the pod
 kubectl apply -f test-pod.yaml
 
 # Wait for pod to be ready
