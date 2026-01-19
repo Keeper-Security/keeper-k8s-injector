@@ -202,6 +202,229 @@ annotations:
 - ✅ More secure for sensitive data
 - ✅ tmpfs storage prevents disk persistence
 
+## Kubernetes Secret Injection (v0.9.0)
+
+**⚠️ Security Notice**: K8s Secrets are less secure than file-based injection. Use for GitOps workflows or apps requiring K8s Secret mounts.
+
+### Overview
+
+Create Kubernetes Secret objects directly from Keeper secrets, enabling native K8s integration while maintaining efficient Keeper backend calls.
+
+### When to Use
+
+- ✅ Apps that mount K8s Secrets as volumes
+- ✅ GitOps workflows requiring K8s Secret manifests
+- ✅ CSI driver compatibility
+- ✅ Sharing secrets across multiple pods
+- ❌ **Not recommended for maximum security** (use file-based tmpfs instead)
+
+| Annotation | Default | Description |
+|------------|---------|-------------|
+| `keeper.security/inject-as-k8s-secret` | `"false"` | Enable K8s Secret injection |
+| `keeper.security/k8s-secret-name` | Required | K8s Secret name to create |
+| `keeper.security/k8s-secret-namespace` | Pod namespace | Namespace for Secret (optional) |
+| `keeper.security/k8s-secret-mode` | `"overwrite"` | Conflict resolution (`overwrite`, `merge`, `skip-if-exists`, `fail`) |
+| `keeper.security/k8s-secret-type` | `"Opaque"` | Secret type (`Opaque`, `kubernetes.io/tls`, etc.) |
+| `keeper.security/k8s-secret-rotation` | `"false"` | Enable sidecar rotation (updates Secret on refresh) |
+| `keeper.security/k8s-secret-owner-ref` | `"true"` | Auto-delete Secret when pod terminates |
+
+### Basic Usage
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-app
+  annotations:
+    keeper.security/inject: "true"
+    keeper.security/auth-secret: "keeper-credentials"
+    keeper.security/inject-as-k8s-secret: "true"
+    keeper.security/k8s-secret-name: "app-secrets"
+    keeper.security/secret: "database-credentials"
+spec:
+  containers:
+    - name: app
+      image: myapp:latest
+      env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: password
+```
+
+**Result**: K8s Secret `app-secrets` created with all fields from `database-credentials`.
+
+### Custom Key Mapping
+
+Map Keeper fields to specific Secret keys:
+
+```yaml
+annotations:
+  keeper.security/inject: "true"
+  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/config: |
+    secrets:
+      - record: "postgres-prod"
+        injectAsK8sSecret: true
+        k8sSecretName: "db-credentials"
+        k8sSecretKeys:
+          username: "POSTGRES_USER"
+          password: "POSTGRES_PASSWORD"
+          host: "POSTGRES_HOST"
+```
+
+**Result**: K8s Secret with custom key names:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-credentials
+data:
+  POSTGRES_USER: <base64>
+  POSTGRES_PASSWORD: <base64>
+  POSTGRES_HOST: <base64>
+```
+
+### TLS Certificate Injection
+
+```yaml
+annotations:
+  keeper.security/inject: "true"
+  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/config: |
+    secrets:
+      - record: "TLS Certificate"
+        fileName: "cert.pem"
+        injectAsK8sSecret: true
+        k8sSecretName: "tls-cert"
+        k8sSecretType: "kubernetes.io/tls"
+        k8sSecretKeys:
+          tls.crt: "cert.pem"
+          tls.key: "key.pem"
+```
+
+**Result**: K8s Secret of type `kubernetes.io/tls` ready for Ingress use.
+
+### Conflict Resolution Modes
+
+#### Overwrite (Default)
+```yaml
+keeper.security/k8s-secret-mode: "overwrite"
+```
+- Replaces all data in existing Secret
+- Use for: Primary secret source
+
+#### Merge
+```yaml
+keeper.security/k8s-secret-mode: "merge"
+```
+- Preserves existing keys, adds/updates new ones
+- Use for: Multiple pods updating same Secret
+
+#### Skip If Exists
+```yaml
+keeper.security/k8s-secret-mode: "skip-if-exists"
+```
+- Does nothing if Secret already exists
+- Use for: Idempotent deployments
+
+#### Fail
+```yaml
+keeper.security/k8s-secret-mode: "fail"
+```
+- Returns error if Secret already exists
+- Use for: Strict validation
+
+### Rotation via Sidecar
+
+Enable automatic Secret updates when secrets change in Keeper:
+
+```yaml
+annotations:
+  keeper.security/inject: "true"
+  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/inject-as-k8s-secret: "true"
+  keeper.security/k8s-secret-name: "app-secrets"
+  keeper.security/k8s-secret-rotation: "true"
+  keeper.security/refresh-interval: "5m"
+  keeper.security/init-only: "false"  # Required for rotation
+  keeper.security/secret: "database-credentials"
+```
+
+**Result**: Sidecar updates K8s Secret every 5 minutes with latest values from Keeper.
+
+### Owner Reference Control
+
+By default, K8s Secrets are deleted when the pod terminates (via owner reference). To keep Secrets after pod deletion:
+
+```yaml
+annotations:
+  keeper.security/k8s-secret-owner-ref: "false"
+```
+
+**Use cases**:
+- Secrets shared across multiple pods
+- Manual Secret lifecycle management
+- StatefulSet deployments
+
+### Multiple Secrets from Folder
+
+Create one K8s Secret per record in a folder:
+
+```yaml
+annotations:
+  keeper.security/inject: "true"
+  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/k8s-secret-rotation: "true"
+  keeper.security/refresh-interval: "5m"
+  keeper.security/config: |
+    folders:
+      - folderPath: "Production/APIs"
+        injectAsK8sSecret: true
+        k8sSecretNamePrefix: "api-"
+```
+
+**Result**: Secrets created: `api-stripe`, `api-twilio`, `api-sendgrid` (one per record in folder)
+
+### Security Comparison
+
+| Aspect | Files (tmpfs) | Env Vars | K8s Secrets |
+|--------|--------------|----------|-------------|
+| **Storage** | RAM (tmpfs) | Pod spec | etcd (disk) |
+| **Persistence** | Pod lifetime | Pod lifetime | Survives pod deletion |
+| **Backups** | Not included | Not included | ✅ Included in backups |
+| **Encryption** | N/A (RAM) | N/A | Requires etcd encryption |
+| **Audit** | Container logs | Pod metadata | K8s audit logs |
+| **Visibility** | Hidden | `kubectl describe` | `kubectl get secret` |
+| **Rotation** | ✅ Yes (sidecar) | ❌ No | ✅ Yes (sidecar) |
+| **Best For** | Production | Legacy apps | K8s-native apps |
+
+### Security Recommendations
+
+1. **Enable etcd encryption** if using K8s Secret injection
+2. **Use RBAC** to limit who can read Secrets
+3. **Prefer file-based injection** for maximum security
+4. **Use K8s Secrets only when**:
+   - GitOps requires K8s Secret manifests
+   - Apps expect K8s Secret mounts
+   - CSI driver integration needed
+5. **Monitor Secret access** via K8s audit logs
+
+### Supported Secret Types
+
+- `Opaque` - Default, arbitrary key-value pairs
+- `kubernetes.io/tls` - TLS certificates (requires `tls.crt` and `tls.key`)
+- `kubernetes.io/dockerconfigjson` - Docker registry auth
+- `kubernetes.io/basic-auth` - Basic authentication
+- `kubernetes.io/ssh-auth` - SSH authentication
+
+### Efficient Batching
+
+The injector makes **ONE** Keeper API call to fetch all records, then creates multiple K8s Secrets. This minimizes API load and speeds up pod admission.
+
+**Example**: 10 secrets = 1 API call (not 10)
+
 ## Authentication Annotations
 
 ### Basic Authentication (K8s Secret)

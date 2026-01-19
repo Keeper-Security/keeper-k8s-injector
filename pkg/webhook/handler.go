@@ -226,6 +226,11 @@ func (m *PodMutator) mutatePod(ctx context.Context, pod *corev1.Pod, cfg *config
 		return fmt.Errorf("failed to inject environment variables: %w", err)
 	}
 
+	// Create K8s Secrets (if enabled, v0.9.0)
+	if err := m.injectK8sSecrets(ctx, pod, cfg); err != nil {
+		return fmt.Errorf("failed to inject K8s secrets: %w", err)
+	}
+
 	// Add annotation to indicate injection occurred (for GitOps compatibility)
 	if pod.Annotations == nil {
 		pod.Annotations = make(map[string]string)

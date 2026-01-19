@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: rotation-demo
+  annotations:
+    keeper.security/inject: "true"
+    keeper.security/auth-secret: "keeper-credentials"
+
+    # Enable K8s Secret injection
+    keeper.security/inject-as-k8s-secret: "true"
+    keeper.security/k8s-secret-name: "app-secrets"
+    keeper.security/secret: "demo-secret"
+
+    # Enable rotation
+    keeper.security/k8s-secret-rotation: "true"
+    keeper.security/refresh-interval: "5m"
+    keeper.security/init-only: "false"  # Required for rotation
+spec:
+  containers:
+    - name: app
+      image: nginx:alpine
+      env:
+        - name: PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: password
+
+      # App can watch Secret for changes
+      volumeMounts:
+        - name: secrets
+          mountPath: /etc/secrets
+          readOnly: true
+
+  volumes:
+    - name: secrets
+      secret:
+        secretName: app-secrets
+
+---
+# Verification script
+# 1. Deploy: kubectl apply -f rotation.yaml
+# 2. Check initial Secret: kubectl get secret app-secrets -o yaml
+# 3. Update secret in Keeper vault
+# 4. Wait 5 minutes
+# 5. Check updated Secret: kubectl get secret app-secrets -o yaml
+# 6. View sidecar logs: kubectl logs rotation-demo -c keeper-secrets-sidecar

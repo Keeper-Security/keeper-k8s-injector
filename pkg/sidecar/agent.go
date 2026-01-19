@@ -19,6 +19,9 @@ import (
 	"github.com/keeper-security/keeper-k8s-injector/pkg/sidecar/retry"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 // Mode represents the agent operating mode
@@ -39,6 +42,11 @@ type SecretConfig struct {
 	Notation string   `json:"notation,omitempty"` // Keeper notation (e.g., keeper://UID/field/password)
 	FileName string   `json:"fileName,omitempty"` // For file attachments
 	IsFile   bool     `json:"isFile,omitempty"`   // Whether this is a file attachment
+
+	// K8s Secret injection (v0.9.0)
+	InjectAsK8sSecret bool              `json:"injectAsK8sSecret,omitempty"` // Enable K8s Secret injection
+	K8sSecretName     string            `json:"k8sSecretName,omitempty"`     // K8s Secret name
+	K8sSecretKeys     map[string]string `json:"k8sSecretKeys,omitempty"`     // Keeper field → Secret key mapping
 }
 
 // FolderConfig represents a folder to fetch all secrets from
@@ -60,12 +68,17 @@ type AgentConfig struct {
 	KSMConfig       string // Base64-encoded KSM config (for secret auth)
 	AuthMethod      string // Auth method: "secret" (default) or "oidc"
 	Logger          *zap.Logger
+
+	// K8s Secret rotation (v0.9.0)
+	K8sSecretRotation  bool   // Enable K8s Secret updates during rotation
+	K8sSecretNamespace string // Namespace for K8s Secrets (defaults to pod namespace)
 }
 
 // Agent manages secret fetching and rotation
 type Agent struct {
 	config      *AgentConfig
 	ksmClient   *ksm.Client
+	k8sClient   kubernetes.Interface // For K8s Secret updates (v0.9.0)
 	logger      *zap.Logger
 	secretCache *cache.SecretCache
 	mu          sync.RWMutex
@@ -80,8 +93,23 @@ func NewAgent(cfg *AgentConfig) (*Agent, error) {
 		cfg.Logger = zap.NewNop()
 	}
 
+	// Initialize K8s client if rotation enabled (v0.9.0)
+	var k8sClient kubernetes.Interface
+	if cfg.K8sSecretRotation {
+		config, err := rest.InClusterConfig()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get in-cluster config: %w", err)
+		}
+		k8sClient, err = kubernetes.NewForConfig(config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create k8s client: %w", err)
+		}
+		cfg.Logger.Info("K8s Secret rotation enabled", zap.String("namespace", cfg.K8sSecretNamespace))
+	}
+
 	return &Agent{
 		config:      cfg,
+		k8sClient:   k8sClient,
 		logger:      cfg.Logger,
 		secretCache: cache.NewSecretCache(24 * time.Hour),
 		lastFetch:   make(map[string]time.Time),
@@ -166,6 +194,11 @@ func (a *Agent) runSidecarMode(ctx context.Context) error {
 				// Don't mark unhealthy on refresh failure - keep last good values
 			} else {
 				a.logger.Debug("secrets refreshed successfully")
+			}
+
+			// Update K8s Secrets if rotation enabled (v0.9.0)
+			if err := a.updateK8sSecrets(ctx); err != nil {
+				a.logger.Error("K8s secret update failed", zap.Error(err))
 			}
 		}
 	}
@@ -529,6 +562,136 @@ func escapeEnvValue(value string) string {
 		return "'" + escaped + "'"
 	}
 	return value
+}
+
+// updateK8sSecrets updates K8s Secrets during rotation (v0.9.0)
+func (a *Agent) updateK8sSecrets(ctx context.Context) error {
+	if a.k8sClient == nil {
+		return nil // Rotation not enabled
+	}
+
+	namespace := a.config.K8sSecretNamespace
+	if namespace == "" {
+		// Try to get namespace from pod environment
+		namespace = os.Getenv("POD_NAMESPACE")
+		if namespace == "" {
+			namespace = "default"
+		}
+	}
+
+	// Update K8s Secrets for each secret configured for K8s Secret injection
+	for _, secretCfg := range a.config.Secrets {
+		if !secretCfg.InjectAsK8sSecret || secretCfg.K8sSecretName == "" {
+			continue
+		}
+
+		// Fetch updated secret from KSM
+		var data *ksm.SecretData
+		var err error
+
+		if secretCfg.Notation != "" {
+			// Handle notation
+			notationData, notationErr := a.ksmClient.GetNotation(ctx, secretCfg.Notation)
+			if notationErr != nil {
+				a.logger.Error("failed to fetch notation for K8s Secret update",
+					zap.String("notation", secretCfg.Notation),
+					zap.Error(notationErr))
+				continue
+			}
+			data = &ksm.SecretData{
+				Fields: map[string]interface{}{
+					"value": string(notationData),
+				},
+			}
+		} else if secretCfg.IsFile {
+			// Handle file
+			fileData, fileErr := a.ksmClient.GetFileContent(ctx, secretCfg.Name, secretCfg.FileName)
+			if fileErr != nil {
+				a.logger.Error("failed to fetch file for K8s Secret update",
+					zap.String("name", secretCfg.Name),
+					zap.String("fileName", secretCfg.FileName),
+					zap.Error(fileErr))
+				continue
+			}
+			data = &ksm.SecretData{
+				Fields: map[string]interface{}{
+					secretCfg.FileName: fileData,
+				},
+			}
+		} else {
+			// Fetch regular secret
+			data, err = a.ksmClient.GetSecret(ctx, secretCfg.Name)
+			if err != nil {
+				a.logger.Error("failed to fetch secret for K8s Secret update",
+					zap.String("name", secretCfg.Name),
+					zap.Error(err))
+				continue
+			}
+		}
+
+		// Get existing K8s Secret
+		secret, err := a.k8sClient.CoreV1().Secrets(namespace).Get(ctx, secretCfg.K8sSecretName, metav1.GetOptions{})
+		if err != nil {
+			a.logger.Error("failed to get K8s Secret",
+				zap.String("name", secretCfg.K8sSecretName),
+				zap.Error(err))
+			continue
+		}
+
+		// Update Secret data
+		if secret.Data == nil {
+			secret.Data = make(map[string][]byte)
+		}
+
+		if len(secretCfg.K8sSecretKeys) > 0 {
+			// Custom key mapping
+			for keeperField, k8sKey := range secretCfg.K8sSecretKeys {
+				if value, ok := data.Fields[keeperField]; ok {
+					secret.Data[k8sKey] = valueToBytes(value)
+				}
+			}
+		} else if len(secretCfg.Fields) > 0 {
+			// Selected fields
+			for _, field := range secretCfg.Fields {
+				if value, ok := data.Fields[field]; ok {
+					secret.Data[field] = valueToBytes(value)
+				}
+			}
+		} else {
+			// All fields
+			for field, value := range data.Fields {
+				secret.Data[field] = valueToBytes(value)
+			}
+		}
+
+		// Update K8s Secret
+		_, err = a.k8sClient.CoreV1().Secrets(namespace).Update(ctx, secret, metav1.UpdateOptions{})
+		if err != nil {
+			a.logger.Error("failed to update K8s Secret",
+				zap.String("name", secretCfg.K8sSecretName),
+				zap.Error(err))
+		} else {
+			a.logger.Info("updated K8s Secret",
+				zap.String("name", secretCfg.K8sSecretName),
+				zap.String("namespace", namespace))
+		}
+	}
+
+	return nil
+}
+
+// valueToBytes converts a value to []byte for K8s Secret
+func valueToBytes(value interface{}) []byte {
+	switch v := value.(type) {
+	case string:
+		return []byte(v)
+	case []byte:
+		return v
+	default:
+		// JSON encode complex types
+		data, _ := json.Marshal(v)
+		return data
+	}
 }
 
 // startHealthServer starts the health check HTTP server

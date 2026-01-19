@@ -202,6 +202,79 @@ annotations:
 - Visible in process listings
 - May be captured in logs or debugging output
 
+### Method 3: Kubernetes Secrets (Optional)
+
+Secrets can be injected as Kubernetes Secret objects for GitOps workflows and K8s-native applications.
+
+**⚠️ Security Notice**: K8s Secrets are stored in etcd. Use file-based injection for higher security.
+
+**Simple Usage**:
+```yaml
+annotations:
+  keeper.security/inject: "true"
+  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/inject-as-k8s-secret: "true"
+  keeper.security/k8s-secret-name: "app-secrets"
+  keeper.security/secret: "database-credentials"
+spec:
+  containers:
+    - name: app
+      env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: password
+```
+
+**Result**: K8s Secret `app-secrets` created with all fields from record.
+
+**Custom Key Mapping**:
+```yaml
+annotations:
+  keeper.security/config: |
+    secrets:
+      - record: "postgres-prod"
+        injectAsK8sSecret: true
+        k8sSecretName: "db-credentials"
+        k8sSecretKeys:
+          username: "POSTGRES_USER"
+          password: "POSTGRES_PASSWORD"
+          host: "POSTGRES_HOST"
+```
+
+**Conflict Resolution**:
+- `overwrite` - Replace all data (default)
+- `merge` - Preserve existing keys, add new ones
+- `skip-if-exists` - Do nothing if Secret exists
+- `fail` - Error if Secret exists
+
+**Rotation via Sidecar**:
+```yaml
+annotations:
+  keeper.security/k8s-secret-rotation: "true"
+  keeper.security/refresh-interval: "5m"
+```
+
+Sidecar updates K8s Secret every 5 minutes.
+
+**Owner References**:
+By default, Secrets are deleted when pod terminates. Disable with:
+```yaml
+annotations:
+  keeper.security/k8s-secret-owner-ref: "false"
+```
+
+**Injection Method Comparison**:
+
+| Feature | Files | Env Vars | K8s Secrets |
+|---------|-------|----------|-------------|
+| Storage | tmpfs (RAM) | Pod spec | etcd (disk) |
+| Rotation | ✅ Yes | ❌ No | ✅ Yes |
+| Visibility | Hidden | `kubectl describe` | `kubectl get secret` |
+| Security | Highest | Medium | Medium |
+| Use For | Production | Legacy apps | GitOps/K8s-native |
+
 ---
 
 ## Output Formats

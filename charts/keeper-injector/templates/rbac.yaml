@@ -14,6 +14,10 @@ rules:
       - get
       - list
       - watch
+      - create
+      - update
+      - patch
+      - delete  # For cleanup when pod terminates (v0.9.0 K8s Secret injection)
   - apiGroups:
       - ""
     resources:

@@ -1,0 +1,78 @@
+# Conflict Mode Examples
+# These demonstrate different behaviors when K8s Secret already exists
+
+---
+# Mode 1: Overwrite (Default)
+# Replaces all data in existing Secret
+apiVersion: v1
+kind: Pod
+metadata:
+  name: overwrite-mode-demo
+  annotations:
+    keeper.security/inject: "true"
+    keeper.security/auth-secret: "keeper-credentials"
+    keeper.security/inject-as-k8s-secret: "true"
+    keeper.security/k8s-secret-name: "shared-secret"
+    keeper.security/k8s-secret-mode: "overwrite"
+    keeper.security/secret: "demo-secret"
+spec:
+  containers:
+    - name: app
+      image: nginx:alpine
+
+---
+# Mode 2: Merge
+# Preserves existing keys, adds/updates new ones
+apiVersion: v1
+kind: Pod
+metadata:
+  name: merge-mode-demo
+  annotations:
+    keeper.security/inject: "true"
+    keeper.security/auth-secret: "keeper-credentials"
+    keeper.security/inject-as-k8s-secret: "true"
+    keeper.security/k8s-secret-name: "merged-secret"
+    keeper.security/k8s-secret-mode: "merge"
+    keeper.security/secret: "demo-secret"
+spec:
+  containers:
+    - name: app
+      image: nginx:alpine
+
+---
+# Mode 3: Skip If Exists
+# Does nothing if Secret already exists
+apiVersion: v1
+kind: Pod
+metadata:
+  name: skip-mode-demo
+  annotations:
+    keeper.security/inject: "true"
+    keeper.security/auth-secret: "keeper-credentials"
+    keeper.security/inject-as-k8s-secret: "true"
+    keeper.security/k8s-secret-name: "persistent-secret"
+    keeper.security/k8s-secret-mode: "skip-if-exists"
+    keeper.security/secret: "demo-secret"
+spec:
+  containers:
+    - name: app
+      image: nginx:alpine
+
+---
+# Mode 4: Fail
+# Returns error if Secret already exists (strict validation)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: fail-mode-demo
+  annotations:
+    keeper.security/inject: "true"
+    keeper.security/auth-secret: "keeper-credentials"
+    keeper.security/inject-as-k8s-secret: "true"
+    keeper.security/k8s-secret-name: "unique-secret"
+    keeper.security/k8s-secret-mode: "fail"
+    keeper.security/secret: "demo-secret"
+spec:
+  containers:
+    - name: app
+      image: nginx:alpine

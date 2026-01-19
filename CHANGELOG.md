@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-01-19
+
+### Added
+
+- Kubernetes Secret injection via `keeper.security/inject-as-k8s-secret` annotation
+- Custom key mapping for K8s Secrets via `k8sSecretKeys` field
+- Support for all K8s Secret types: Opaque, kubernetes.io/tls, dockerconfigjson, basic-auth, ssh-auth
+- Conflict resolution modes: overwrite, merge, skip-if-exists, fail
+- Sidecar rotation support for K8s Secrets via `keeper.security/k8s-secret-rotation`
+- Owner references for automatic Secret cleanup when pod terminates
+- Cross-namespace Secret creation via `keeper.security/k8s-secret-namespace`
+- Folder-based batch creation with `k8sSecretNamePrefix`
+- K8s Secret size validation (1MB limit)
+- New annotations:
+  - `keeper.security/inject-as-k8s-secret`
+  - `keeper.security/k8s-secret-name`
+  - `keeper.security/k8s-secret-namespace`
+  - `keeper.security/k8s-secret-mode`
+  - `keeper.security/k8s-secret-type`
+  - `keeper.security/k8s-secret-rotation`
+  - `keeper.security/k8s-secret-owner-ref`
+- YAML config fields: `injectAsK8sSecret`, `k8sSecretName`, `k8sSecretKeys`, `k8sSecretType`, `k8sSecretNamePrefix`
+
+### Changed
+
+- RBAC permissions extended with Secret write verbs (create, update, patch, delete)
+- Webhook handler calls K8s Secret injection
+- Sidecar agent includes K8s client for Secret updates
+
+### Security
+
+K8s Secrets are stored in etcd and visible via kubectl. File-based injection (tmpfs) remains the default for higher security.
+
 ## [0.8.0] - 2026-01-18
 
 ### Added

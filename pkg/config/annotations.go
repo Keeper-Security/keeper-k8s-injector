@@ -37,6 +37,15 @@ const (
 	AnnotationInjectEnvVars = AnnotationPrefix + "inject-env-vars" // Inject secrets as env vars instead of files
 	AnnotationEnvPrefix     = AnnotationPrefix + "env-prefix"      // Optional prefix for env var names (e.g., "DB_")
 
+	// Kubernetes Secret injection annotations (v0.9.0)
+	AnnotationInjectAsK8sSecret  = AnnotationPrefix + "inject-as-k8s-secret" // Enable K8s Secret injection
+	AnnotationK8sSecretName      = AnnotationPrefix + "k8s-secret-name"      // K8s Secret name (single secret mode)
+	AnnotationK8sSecretNamespace = AnnotationPrefix + "k8s-secret-namespace" // Namespace override (defaults to pod namespace)
+	AnnotationK8sSecretMode      = AnnotationPrefix + "k8s-secret-mode"      // Conflict resolution mode (overwrite|merge|skip-if-exists|fail)
+	AnnotationK8sSecretType      = AnnotationPrefix + "k8s-secret-type"      // Secret type (Opaque, kubernetes.io/tls, etc.)
+	AnnotationK8sSecretRotation  = AnnotationPrefix + "k8s-secret-rotation"  // Enable sidecar rotation (default: false)
+	AnnotationK8sSecretOwnerRef  = AnnotationPrefix + "k8s-secret-owner-ref" // Add owner reference for auto-cleanup (default: true)
+
 	// CA Certificate annotations (for corporate proxies/SSL inspection)
 	AnnotationCACertSecret    = AnnotationPrefix + "ca-cert-secret"     // K8s Secret name with CA cert
 	AnnotationCACertConfigMap = AnnotationPrefix + "ca-cert-configmap"  // K8s ConfigMap name with CA cert
@@ -84,6 +93,12 @@ type SecretRef struct {
 	InjectAsEnvVars bool
 	// EnvVarPrefix is an optional prefix for env var names (e.g., "DB_" → DB_PASSWORD)
 	EnvVarPrefix string
+
+	// K8s Secret injection (per-secret, v0.9.0)
+	InjectAsK8sSecret bool              // Enable K8s Secret injection for this secret
+	K8sSecretName     string            // K8s Secret name for this secret
+	K8sSecretKeys     map[string]string // Keeper field → Secret key mapping
+	K8sSecretType     string            // Secret type (Opaque, kubernetes.io/tls, etc.)
 }
 
 // FolderRef represents a reference to a folder in Keeper
@@ -94,6 +109,10 @@ type FolderRef struct {
 	FolderPath string
 	// OutputPath is where to write the secrets (default: /keeper/secrets)
 	OutputPath string
+
+	// K8s Secret injection (per-folder, v0.9.0)
+	InjectAsK8sSecret   bool   // Enable K8s Secret injection for this folder
+	K8sSecretNamePrefix string // Prefix for generated Secret names (e.g., "api-" → "api-stripe")
 }
 
 // InjectionConfig holds the parsed injection configuration for a pod
@@ -137,6 +156,15 @@ type InjectionConfig struct {
 	// Environment variable injection configuration
 	InjectEnvVars bool   // Global flag to inject all secrets as env vars
 	EnvPrefix     string // Global prefix for all env var names
+
+	// Kubernetes Secret injection configuration (v0.9.0)
+	InjectAsK8sSecret  bool   // Global flag to enable K8s Secret injection
+	K8sSecretName      string // K8s Secret name (single secret mode)
+	K8sSecretNamespace string // Namespace override (defaults to pod namespace)
+	K8sSecretMode      string // Conflict resolution mode (overwrite|merge|skip-if-exists|fail)
+	K8sSecretType      string // Secret type (Opaque, kubernetes.io/tls, etc.)
+	K8sSecretRotation  bool   // Enable sidecar rotation (default: false)
+	K8sSecretOwnerRef  bool   // Add owner reference for auto-cleanup (default: true)
 }
 
 // ParseAnnotations extracts injection configuration from pod annotations
@@ -192,6 +220,33 @@ func ParseAnnotations(pod *corev1.Pod) (*InjectionConfig, error) {
 	}
 	if envPrefix, ok := annotations[AnnotationEnvPrefix]; ok {
 		config.EnvPrefix = envPrefix
+	}
+
+	// Parse Kubernetes Secret injection annotations (v0.9.0)
+	if injectAsK8sSecret, ok := annotations[AnnotationInjectAsK8sSecret]; ok {
+		config.InjectAsK8sSecret = strings.ToLower(injectAsK8sSecret) == "true"
+	}
+	if k8sSecretName, ok := annotations[AnnotationK8sSecretName]; ok {
+		config.K8sSecretName = k8sSecretName
+	}
+	if k8sSecretNamespace, ok := annotations[AnnotationK8sSecretNamespace]; ok {
+		config.K8sSecretNamespace = k8sSecretNamespace
+	}
+	if k8sSecretMode, ok := annotations[AnnotationK8sSecretMode]; ok {
+		config.K8sSecretMode = k8sSecretMode
+	} else {
+		config.K8sSecretMode = "overwrite" // Default mode
+	}
+	if k8sSecretType, ok := annotations[AnnotationK8sSecretType]; ok {
+		config.K8sSecretType = k8sSecretType
+	}
+	if k8sSecretRotation, ok := annotations[AnnotationK8sSecretRotation]; ok {
+		config.K8sSecretRotation = strings.ToLower(k8sSecretRotation) == "true"
+	}
+	// Owner reference defaults to true
+	config.K8sSecretOwnerRef = true
+	if k8sSecretOwnerRef, ok := annotations[AnnotationK8sSecretOwnerRef]; ok && strings.ToLower(k8sSecretOwnerRef) == "false" {
+		config.K8sSecretOwnerRef = false
 	}
 
 	// Parse CA certificate configuration
@@ -502,10 +557,20 @@ type SecretYAMLConfig struct {
 	Template string `yaml:"template,omitempty"`
 	// File is for file attachment downloads
 	File string `yaml:"file,omitempty"`
+	// FileName is for file attachment downloads (alias for File, for clarity)
+	FileName string `yaml:"fileName,omitempty"`
 	// InjectAsEnvVars if true, inject this secret as env vars instead of file
 	InjectAsEnvVars bool `yaml:"injectAsEnvVars,omitempty"`
 	// EnvPrefix is an optional prefix for env var names
 	EnvPrefix string `yaml:"envPrefix,omitempty"`
+	// InjectAsK8sSecret if true, inject as K8s Secret object (v0.9.0)
+	InjectAsK8sSecret bool `yaml:"injectAsK8sSecret,omitempty"`
+	// K8sSecretName is the name of the K8s Secret to create
+	K8sSecretName string `yaml:"k8sSecretName,omitempty"`
+	// K8sSecretKeys maps Keeper fields to Secret keys
+	K8sSecretKeys map[string]string `yaml:"k8sSecretKeys,omitempty"`
+	// K8sSecretType is the Secret type (Opaque, kubernetes.io/tls, etc.)
+	K8sSecretType string `yaml:"k8sSecretType,omitempty"`
 }
 
 // FolderYAMLConfig represents a folder in YAML config
@@ -514,8 +579,14 @@ type FolderYAMLConfig struct {
 	UID string `yaml:"uid,omitempty"`
 	// Path is the folder path (e.g., "Production/Databases")
 	Path string `yaml:"path,omitempty"`
+	// FolderPath is an alias for Path (for consistency)
+	FolderPath string `yaml:"folderPath,omitempty"`
 	// OutputPath is where to write secrets
 	OutputPath string `yaml:"outputPath,omitempty"`
+	// InjectAsK8sSecret if true, inject as K8s Secret objects (v0.9.0)
+	InjectAsK8sSecret bool `yaml:"injectAsK8sSecret,omitempty"`
+	// K8sSecretNamePrefix is the prefix for generated Secret names
+	K8sSecretNamePrefix string `yaml:"k8sSecretNamePrefix,omitempty"`
 }
 
 // parseFullConfig parses Level 5 YAML configuration
@@ -528,10 +599,14 @@ func parseFullConfig(configYAML string) ([]SecretRef, []FolderRef, error) {
 	var secrets []SecretRef
 	for _, s := range cfg.Secrets {
 		ref := SecretRef{
-			Format:          s.Format,
-			Template:        s.Template,
-			InjectAsEnvVars: s.InjectAsEnvVars,
-			EnvVarPrefix:    s.EnvPrefix,
+			Format:            s.Format,
+			Template:          s.Template,
+			InjectAsEnvVars:   s.InjectAsEnvVars,
+			EnvVarPrefix:      s.EnvPrefix,
+			InjectAsK8sSecret: s.InjectAsK8sSecret,
+			K8sSecretName:     s.K8sSecretName,
+			K8sSecretKeys:     s.K8sSecretKeys,
+			K8sSecretType:     s.K8sSecretType,
 		}
 
 		// Set default format
@@ -550,10 +625,14 @@ func parseFullConfig(configYAML string) ([]SecretRef, []FolderRef, error) {
 			ref.Name = s.Record
 		}
 
-		// Handle file attachment
-		if s.File != "" {
+		// Handle file attachment (support both "file" and "fileName" fields)
+		fileName := s.File
+		if fileName == "" {
+			fileName = s.FileName
+		}
+		if fileName != "" {
 			ref.IsFile = true
-			ref.FileName = s.File
+			ref.FileName = fileName
 			ref.Format = "raw"
 		}
 
@@ -575,10 +654,18 @@ func parseFullConfig(configYAML string) ([]SecretRef, []FolderRef, error) {
 
 	var folders []FolderRef
 	for _, f := range cfg.Folders {
+		// Support both "path" and "folderPath" fields
+		folderPath := f.Path
+		if folderPath == "" {
+			folderPath = f.FolderPath
+		}
+
 		ref := FolderRef{
-			FolderUID:  f.UID,
-			FolderPath: f.Path,
-			OutputPath: f.OutputPath,
+			FolderUID:           f.UID,
+			FolderPath:          folderPath,
+			OutputPath:          f.OutputPath,
+			InjectAsK8sSecret:   f.InjectAsK8sSecret,
+			K8sSecretNamePrefix: f.K8sSecretNamePrefix,
 		}
 		if ref.OutputPath == "" {
 			ref.OutputPath = DefaultSecretsPath

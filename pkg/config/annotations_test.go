@@ -444,3 +444,286 @@ func TestExtractRecordFromNotation(t *testing.T) {
 		})
 	}
 }
+
+// ============================================================================
+// K8s Secret Injection Tests (v0.9.0)
+// ============================================================================
+
+func TestParseAnnotations_K8sSecretInjection(t *testing.T) {
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"keeper.security/inject":              "true",
+				"keeper.security/auth-secret":         "keeper-creds",
+				"keeper.security/secret":              "database-credentials",
+				"keeper.security/inject-as-k8s-secret": "true",
+				"keeper.security/k8s-secret-name":     "app-secrets",
+			},
+		},
+	}
+
+	cfg, err := ParseAnnotations(pod)
+	if err != nil {
+		t.Fatalf("ParseAnnotations() error = %v", err)
+	}
+
+	if !cfg.Enabled {
+		t.Error("Expected Enabled = true")
+	}
+	if !cfg.InjectAsK8sSecret {
+		t.Error("Expected InjectAsK8sSecret = true")
+	}
+	if cfg.K8sSecretName != "app-secrets" {
+		t.Errorf("K8sSecretName = %v, want app-secrets", cfg.K8sSecretName)
+	}
+	if cfg.K8sSecretMode != "overwrite" {
+		t.Errorf("K8sSecretMode = %v, want overwrite (default)", cfg.K8sSecretMode)
+	}
+	if !cfg.K8sSecretOwnerRef {
+		t.Error("Expected K8sSecretOwnerRef = true (default)")
+	}
+}
+
+func TestParseAnnotations_K8sSecretMode(t *testing.T) {
+	tests := []struct {
+		name         string
+		mode         string
+		expectedMode string
+	}{
+		{"default", "", "overwrite"},
+		{"overwrite explicit", "overwrite", "overwrite"},
+		{"merge", "merge", "merge"},
+		{"skip-if-exists", "skip-if-exists", "skip-if-exists"},
+		{"fail", "fail", "fail"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			annotations := map[string]string{
+				"keeper.security/inject":              "true",
+				"keeper.security/auth-secret":         "keeper-creds",
+				"keeper.security/secret":              "test-secret",
+				"keeper.security/inject-as-k8s-secret": "true",
+				"keeper.security/k8s-secret-name":     "test",
+			}
+			if tt.mode != "" {
+				annotations["keeper.security/k8s-secret-mode"] = tt.mode
+			}
+
+			pod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: annotations,
+				},
+			}
+
+			cfg, err := ParseAnnotations(pod)
+			if err != nil {
+				t.Fatalf("ParseAnnotations() error = %v", err)
+			}
+			if cfg.K8sSecretMode != tt.expectedMode {
+				t.Errorf("K8sSecretMode = %v, want %v", cfg.K8sSecretMode, tt.expectedMode)
+			}
+		})
+	}
+}
+
+func TestParseAnnotations_K8sSecretOwnerRef(t *testing.T) {
+	t.Run("default enabled", func(t *testing.T) {
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					"keeper.security/inject":              "true",
+					"keeper.security/auth-secret":         "keeper-creds",
+					"keeper.security/secret":              "test-secret",
+					"keeper.security/inject-as-k8s-secret": "true",
+					"keeper.security/k8s-secret-name":     "test",
+				},
+			},
+		}
+
+		cfg, err := ParseAnnotations(pod)
+		if err != nil {
+			t.Fatalf("ParseAnnotations() error = %v", err)
+		}
+		if !cfg.K8sSecretOwnerRef {
+			t.Error("Expected K8sSecretOwnerRef = true (default)")
+		}
+	})
+
+	t.Run("explicitly disabled", func(t *testing.T) {
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					"keeper.security/inject":              "true",
+					"keeper.security/auth-secret":         "keeper-creds",
+					"keeper.security/secret":              "test-secret",
+					"keeper.security/inject-as-k8s-secret": "true",
+					"keeper.security/k8s-secret-name":     "test",
+					"keeper.security/k8s-secret-owner-ref": "false",
+				},
+			},
+		}
+
+		cfg, err := ParseAnnotations(pod)
+		if err != nil {
+			t.Fatalf("ParseAnnotations() error = %v", err)
+		}
+		if cfg.K8sSecretOwnerRef {
+			t.Error("Expected K8sSecretOwnerRef = false")
+		}
+	})
+}
+
+func TestParseAnnotations_K8sSecretRotation(t *testing.T) {
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"keeper.security/inject":              "true",
+				"keeper.security/auth-secret":         "keeper-creds",
+				"keeper.security/secret":              "test-secret",
+				"keeper.security/inject-as-k8s-secret": "true",
+				"keeper.security/k8s-secret-name":     "test",
+				"keeper.security/k8s-secret-rotation": "true",
+			},
+		},
+	}
+
+	cfg, err := ParseAnnotations(pod)
+	if err != nil {
+		t.Fatalf("ParseAnnotations() error = %v", err)
+	}
+	if !cfg.K8sSecretRotation {
+		t.Error("Expected K8sSecretRotation = true")
+	}
+}
+
+func TestParseYAMLConfig_K8sSecretKeys(t *testing.T) {
+	yamlConfig := `
+secrets:
+  - record: "database-credentials"
+    injectAsK8sSecret: true
+    k8sSecretName: "db-creds"
+    k8sSecretKeys:
+      username: "DB_USER"
+      password: "DB_PASS"
+      host: "DB_HOST"
+`
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"keeper.security/inject":      "true",
+				"keeper.security/auth-secret": "keeper-creds",
+				"keeper.security/config":      yamlConfig,
+			},
+		},
+	}
+
+	cfg, err := ParseAnnotations(pod)
+	if err != nil {
+		t.Fatalf("ParseAnnotations() error = %v", err)
+	}
+
+	if len(cfg.Secrets) != 1 {
+		t.Fatalf("Expected 1 secret, got %d", len(cfg.Secrets))
+	}
+
+	secret := cfg.Secrets[0]
+	if secret.Name != "database-credentials" {
+		t.Errorf("Name = %v, want database-credentials", secret.Name)
+	}
+	if !secret.InjectAsK8sSecret {
+		t.Error("Expected InjectAsK8sSecret = true")
+	}
+	if secret.K8sSecretName != "db-creds" {
+		t.Errorf("K8sSecretName = %v, want db-creds", secret.K8sSecretName)
+	}
+	if secret.K8sSecretKeys == nil {
+		t.Fatal("Expected K8sSecretKeys to be set")
+	}
+	if secret.K8sSecretKeys["username"] != "DB_USER" {
+		t.Errorf("K8sSecretKeys[username] = %v, want DB_USER", secret.K8sSecretKeys["username"])
+	}
+	if secret.K8sSecretKeys["password"] != "DB_PASS" {
+		t.Errorf("K8sSecretKeys[password] = %v, want DB_PASS", secret.K8sSecretKeys["password"])
+	}
+	if secret.K8sSecretKeys["host"] != "DB_HOST" {
+		t.Errorf("K8sSecretKeys[host] = %v, want DB_HOST", secret.K8sSecretKeys["host"])
+	}
+}
+
+func TestParseYAMLConfig_K8sSecretType(t *testing.T) {
+	yamlConfig := `
+secrets:
+  - record: "tls-certificate"
+    injectAsK8sSecret: true
+    k8sSecretName: "tls-cert"
+    k8sSecretType: "kubernetes.io/tls"
+    k8sSecretKeys:
+      cert: "tls.crt"
+      key: "tls.key"
+`
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"keeper.security/inject":      "true",
+				"keeper.security/auth-secret": "keeper-creds",
+				"keeper.security/config":      yamlConfig,
+			},
+		},
+	}
+
+	cfg, err := ParseAnnotations(pod)
+	if err != nil {
+		t.Fatalf("ParseAnnotations() error = %v", err)
+	}
+
+	if len(cfg.Secrets) != 1 {
+		t.Fatalf("Expected 1 secret, got %d", len(cfg.Secrets))
+	}
+
+	secret := cfg.Secrets[0]
+	if secret.K8sSecretType != "kubernetes.io/tls" {
+		t.Errorf("K8sSecretType = %v, want kubernetes.io/tls", secret.K8sSecretType)
+	}
+}
+
+func TestParseYAMLConfig_FolderWithK8sSecrets(t *testing.T) {
+	yamlConfig := `
+folders:
+  - folderPath: "Production/APIs"
+    injectAsK8sSecret: true
+    k8sSecretNamePrefix: "api-"
+`
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"keeper.security/inject":      "true",
+				"keeper.security/auth-secret": "keeper-creds",
+				"keeper.security/config":      yamlConfig,
+			},
+		},
+	}
+
+	cfg, err := ParseAnnotations(pod)
+	if err != nil {
+		t.Fatalf("ParseAnnotations() error = %v", err)
+	}
+
+	if len(cfg.Folders) != 1 {
+		t.Fatalf("Expected 1 folder, got %d", len(cfg.Folders))
+	}
+
+	folder := cfg.Folders[0]
+	if folder.FolderPath != "Production/APIs" {
+		t.Errorf("FolderPath = %v, want Production/APIs", folder.FolderPath)
+	}
+	if !folder.InjectAsK8sSecret {
+		t.Error("Expected InjectAsK8sSecret = true")
+	}
+	if folder.K8sSecretNamePrefix != "api-" {
+		t.Errorf("K8sSecretNamePrefix = %v, want api-", folder.K8sSecretNamePrefix)
+	}
+}

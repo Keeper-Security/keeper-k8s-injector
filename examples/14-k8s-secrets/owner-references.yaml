@@ -1,0 +1,49 @@
+# Owner Reference Examples
+# Controls whether Secret is deleted when pod terminates
+
+---
+# Auto-cleanup enabled (default)
+# Secret is deleted when pod terminates
+apiVersion: v1
+kind: Pod
+metadata:
+  name: auto-cleanup-demo
+  annotations:
+    keeper.security/inject: "true"
+    keeper.security/auth-secret: "keeper-credentials"
+    keeper.security/inject-as-k8s-secret: "true"
+    keeper.security/k8s-secret-name: "ephemeral-secret"
+    keeper.security/secret: "demo-secret"
+    # keeper.security/k8s-secret-owner-ref: "true" (default, can omit)
+spec:
+  containers:
+    - name: app
+      image: nginx:alpine
+
+---
+# Auto-cleanup disabled
+# Secret persists after pod deletion (for shared secrets)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: persistent-secret-demo
+  annotations:
+    keeper.security/inject: "true"
+    keeper.security/auth-secret: "keeper-credentials"
+    keeper.security/inject-as-k8s-secret: "true"
+    keeper.security/k8s-secret-name: "persistent-secret"
+    keeper.security/k8s-secret-owner-ref: "false"
+    keeper.security/secret: "demo-secret"
+spec:
+  containers:
+    - name: app
+      image: nginx:alpine
+
+---
+# Verification:
+# 1. Deploy both pods: kubectl apply -f owner-references.yaml
+# 2. Check Secrets: kubectl get secrets
+# 3. Delete pods: kubectl delete pod auto-cleanup-demo persistent-secret-demo
+# 4. Check Secrets again: kubectl get secrets
+#    - ephemeral-secret: DELETED (owner reference)
+#    - persistent-secret: EXISTS (no owner reference)
