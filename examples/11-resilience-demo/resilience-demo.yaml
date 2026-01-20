@@ -38,7 +38,7 @@ spec:
       annotations:
         # Enable Keeper injection
         keeper.security/inject: "true"
-        keeper.security/auth-secret: "keeper-credentials"
+        keeper.security/ksm-config: "keeper-credentials"
 
         # Secret to inject
         keeper.security/secret: "demo-secret"

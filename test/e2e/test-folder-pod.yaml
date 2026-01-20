@@ -5,7 +5,7 @@ metadata:
   namespace: keeper-e2e-test
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-auth"
+    keeper.security/ksm-config: "keeper-auth"
     # Test folder support - fetch all secrets from a folder
     # Option 1: Use folder UID (recommended)
     # keeper.security/folder-uid: "YOUR_FOLDER_UID_HERE"

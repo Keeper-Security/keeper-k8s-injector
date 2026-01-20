@@ -40,7 +40,7 @@ spec:
         keeper.security/inject: "true"
 
         # Reference to your KSM auth secret
-        keeper.security/auth-secret: "keeper-credentials"
+        keeper.security/ksm-config: "keeper-credentials"
 
         # The title of your secret in Keeper
         keeper.security/secret: "rotation-demo"

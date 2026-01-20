@@ -4,7 +4,7 @@ metadata:
   name: custom-keys-demo
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-credentials"
+    keeper.security/ksm-config: "keeper-credentials"
 
     # YAML config with custom key mapping
     keeper.security/config: |

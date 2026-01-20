@@ -86,7 +86,7 @@ func NewClient(ctx context.Context, cfg Config) (*Client, error) {
 	// Handle different auth methods
 	switch cfg.AuthMethod {
 	case AuthMethodOIDC:
-		return nil, fmt.Errorf("OIDC authentication is not yet supported - requires Keeper backend support for OIDC token exchange. Use auth-secret with a K8s Secret containing your KSM configuration instead")
+		return nil, fmt.Errorf("OIDC authentication is not yet supported - requires Keeper backend support for OIDC token exchange. Use ksm-config with a K8s Secret containing your KSM configuration instead")
 
 	case AuthMethodSecret, "":
 		// Default: use config JSON from K8s Secret

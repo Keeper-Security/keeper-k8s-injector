@@ -129,7 +129,7 @@ func TestSimplePodInjection(t *testing.T) {
 			Namespace: namespace,
 			Annotations: map[string]string{
 				"keeper.security/inject":      "true",
-				"keeper.security/auth-secret": "keeper-auth-test",
+				"keeper.security/ksm-config": "keeper-auth-test",
 				"keeper.security/secret":      "test-secret", // Must exist in KSM
 			},
 		},

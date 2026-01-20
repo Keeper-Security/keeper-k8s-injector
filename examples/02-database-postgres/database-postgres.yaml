@@ -107,7 +107,7 @@ spec:
         # Enable Keeper injection
         keeper.security/inject: "true"
         # Reference to your KSM auth secret
-        keeper.security/auth-secret: "keeper-credentials"
+        keeper.security/ksm-config: "keeper-credentials"
         # Use YAML config to specify .env format (no jq needed!)
         keeper.security/config: |
           secrets:

@@ -126,7 +126,7 @@ kubectl exec deployment/env-vars-demo -- env | grep APP_
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/ksm-config: "keeper-credentials"
   keeper.security/inject-env-vars: "true"
   keeper.security/secret: "database-credentials"
 ```
@@ -151,7 +151,7 @@ Some secrets as files, some as env vars:
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/ksm-config: "keeper-credentials"
   keeper.security/config: |
     secrets:
       - record: database-credentials

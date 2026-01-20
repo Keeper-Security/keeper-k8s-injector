@@ -86,7 +86,7 @@ metadata:
   name: myapp
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-auth"
+    keeper.security/ksm-config: "keeper-auth"
     keeper.security/secret: "database-credentials"
     keeper.security/refresh-interval: "1h"
 spec:
@@ -103,7 +103,7 @@ metadata:
   name: myapp
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-auth"
+    keeper.security/ksm-config: "keeper-auth"
     keeper.security/inject-as-k8s-secret: "true"
     keeper.security/k8s-secret-name: "app-secrets"
     keeper.security/secret: "database-credentials"
@@ -210,7 +210,7 @@ metadata:
   name: myapp
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-auth"
+    keeper.security/ksm-config: "keeper-auth"
     keeper.security/config: |
       secrets:
         - record: database-credentials
@@ -228,7 +228,7 @@ spec:
 | Vault Annotation | Keeper Equivalent |
 |------------------|-------------------|
 | `vault.hashicorp.com/agent-inject: "true"` | `keeper.security/inject: "true"` |
-| `vault.hashicorp.com/role: "myapp"` | `keeper.security/auth-secret: "keeper-auth"` |
+| `vault.hashicorp.com/role: "myapp"` | `keeper.security/ksm-config: "keeper-auth"` |
 | `vault.hashicorp.com/agent-inject-secret-db` | `keeper.security/secret` or `keeper.security/config` |
 | `vault.hashicorp.com/agent-inject-template-db` | Use `template:` in config |
 | `vault.hashicorp.com/agent-limits-cpu` | Set via Helm `sidecarResources.limits.cpu` |
@@ -417,7 +417,7 @@ kind: Pod
 metadata:
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-auth"
+    keeper.security/ksm-config: "keeper-auth"
     keeper.security/secret: "database-credentials"
 spec:
   containers:

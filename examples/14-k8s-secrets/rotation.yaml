@@ -4,7 +4,7 @@ metadata:
   name: rotation-demo
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-credentials"
+    keeper.security/ksm-config: "keeper-credentials"
 
     # Enable K8s Secret injection
     keeper.security/inject-as-k8s-secret: "true"

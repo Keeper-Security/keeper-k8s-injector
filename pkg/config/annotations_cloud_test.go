@@ -128,7 +128,7 @@ func TestParseAnnotations_CloudAuthBackwardCompatibility(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				AnnotationInject:     "true",
-				AnnotationAuthSecret: "keeper-credentials",
+				AnnotationKSMConfig:  "keeper-credentials",
 				AnnotationSecret:     "test-secret",
 				// No auth-method specified = defaults to "secret"
 			},

@@ -81,7 +81,7 @@ metadata:
   name: test-secrets
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-auth"
+    keeper.security/ksm-config: "keeper-auth"
     keeper.security/secret: "YOUR-SECRET-TITLE"
 spec:
   containers:

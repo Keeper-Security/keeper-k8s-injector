@@ -316,7 +316,7 @@ spec:
    # In Git: app-deployment.yaml
    annotations:
      keeper.security/inject: "true"
-     keeper.security/auth-secret: "keeper-auth"  # Reference only
+     keeper.security/ksm-config: "keeper-auth"  # Reference only
 
    # Not in Git: Created via sealed-secrets or external-secrets
    apiVersion: v1
@@ -548,7 +548,7 @@ spec:
    ```bash
    kubectl run test --image=busybox \
      --annotations=keeper.security/inject=true \
-     --annotations=keeper.security/auth-secret=keeper-auth
+     --annotations=keeper.security/ksm-config=keeper-auth
    ```
 
 **Recovery time objective (RTO)**: < 15 minutes

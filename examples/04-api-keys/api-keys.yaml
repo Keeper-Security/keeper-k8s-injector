@@ -35,7 +35,7 @@ spec:
         # Enable Keeper injection
         keeper.security/inject: "true"
         # Reference to your KSM auth secret
-        keeper.security/auth-secret: "keeper-credentials"
+        keeper.security/ksm-config: "keeper-credentials"
         # Inject multiple API keys to custom paths
         keeper.security/secret-stripe: "stripe-api-key:/app/secrets/stripe.json"
         keeper.security/secret-slack: "slack-webhook:/app/secrets/slack.json"

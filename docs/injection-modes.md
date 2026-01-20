@@ -32,7 +32,7 @@ Secrets are written to tmpfs-backed files in `/keeper/secrets/`. This is the def
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/ksm-config: "keeper-credentials"
   keeper.security/secret: "database-credentials"
 ```
 
@@ -104,7 +104,7 @@ Secrets can be injected directly as environment variables in all containers. Use
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/ksm-config: "keeper-credentials"
   keeper.security/inject-env-vars: "true"
   keeper.security/secret: "database-credentials"
 ```
@@ -141,7 +141,7 @@ Inject some secrets as files, others as environment variables:
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/ksm-config: "keeper-credentials"
   keeper.security/config: |
     secrets:
       - record: database-credentials
@@ -209,7 +209,7 @@ metadata:
   name: my-app
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-credentials"
+    keeper.security/ksm-config: "keeper-credentials"
     keeper.security/inject-as-k8s-secret: "true"
     keeper.security/k8s-secret-name: "app-secrets"
     keeper.security/secret: "database-credentials"

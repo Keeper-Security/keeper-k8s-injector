@@ -79,7 +79,7 @@ kubectl create secret generic keeper-credentials \
 
 ## Step 3: Create Test Pod
 
-**⚠️ Important**: Replace `"YOUR-SECRET-TITLE"` below with an actual secret title from your Keeper Secrets Manager application. Check Keeper UI → Secrets Manager → Application → Secrets tab for available secret titles.
+**⚠️ Important**: Replace `"YOUR-SECRET-TITLE"` below with an actual secret title from your Keeper Secrets Manager application.
 
 ### Create the test pod
 
@@ -91,7 +91,7 @@ metadata:
   name: test-secrets
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-credentials"
+    keeper.security/ksm-config: "keeper-credentials"
     keeper.security/secret: "YOUR-SECRET-TITLE"  # ← CHANGE THIS to your actual secret title
 spec:
   containers:
@@ -201,7 +201,7 @@ spec:
         app: my-app
       annotations:
         keeper.security/inject: "true"
-        keeper.security/auth-secret: "keeper-credentials"
+        keeper.security/ksm-config: "keeper-credentials"
         keeper.security/secrets: "database-creds, api-keys"
         keeper.security/refresh-interval: "5m"
     spec:

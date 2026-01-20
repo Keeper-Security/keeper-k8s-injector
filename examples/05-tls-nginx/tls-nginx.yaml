@@ -76,7 +76,7 @@ spec:
         # Enable Keeper injection
         keeper.security/inject: "true"
         # Reference to your KSM auth secret
-        keeper.security/auth-secret: "keeper-credentials"
+        keeper.security/ksm-config: "keeper-credentials"
         # Inject TLS certificate files from Keeper record
         # Format: keeper.security/file-{name}: "{record-title}:{filename}:{path}"
         keeper.security/file-cert: "tls-certificate:server.crt:/app/certs/server.crt"

@@ -8,7 +8,7 @@ Complete reference for configuring Keeper K8s Injector through annotations and H
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-auth"
+  keeper.security/ksm-config: "keeper-auth"
   keeper.security/secret: "my-secret"
 ```
 
@@ -45,7 +45,7 @@ kubectl create secret generic keeper-credentials \
 Use in pod:
 ```yaml
 annotations:
-  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/ksm-config: "keeper-credentials"
   keeper.security/auth-method: "secret"  # default, can be omitted
 ```
 
@@ -96,7 +96,7 @@ All annotations use the `keeper.security/` prefix.
 | Annotation | Description | Example |
 |------------|-------------|---------|
 | `keeper.security/inject` | Enable injection | `"true"` |
-| `keeper.security/auth-secret` | K8s secret with KSM config | `"keeper-auth"` |
+| `keeper.security/ksm-config` | K8s secret with KSM config | `"keeper-auth"` |
 
 ### Secret Selection
 
@@ -105,7 +105,7 @@ All annotations use the `keeper.security/` prefix.
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-auth"
+  keeper.security/ksm-config: "keeper-auth"
   keeper.security/secret: "database-credentials"
 ```
 
@@ -116,7 +116,7 @@ Result: `/keeper/secrets/database-credentials.json`
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-auth"
+  keeper.security/ksm-config: "keeper-auth"
   keeper.security/secrets: "database-creds, api-keys, tls-cert"
 ```
 
@@ -130,7 +130,7 @@ Result:
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-auth"
+  keeper.security/ksm-config: "keeper-auth"
   keeper.security/secret-database: "/app/config/db.json"
   keeper.security/secret-api: "/etc/myapp/api-keys.json"
 ```
@@ -142,7 +142,7 @@ Extract specific fields from a record:
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-auth"
+  keeper.security/ksm-config: "keeper-auth"
   keeper.security/secret-password: "database-creds[password]:/app/secrets/db-pass"
 ```
 
@@ -155,7 +155,7 @@ For complex scenarios, use YAML configuration:
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-auth"
+  keeper.security/ksm-config: "keeper-auth"
   keeper.security/config: |
     secrets:
       - record: database-credentials
@@ -174,7 +174,7 @@ Use Go templates for custom formatting:
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-auth"
+  keeper.security/ksm-config: "keeper-auth"
   keeper.security/config: |
     secrets:
       - record: postgres-credentials
@@ -213,7 +213,7 @@ Templates support 100+ functions from [Sprig](http://masterminds.github.io/sprig
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/ksm-config: "keeper-credentials"
   keeper.security/inject-env-vars: "true"
   keeper.security/secret: "database-credentials"
 ```
@@ -230,7 +230,7 @@ HOSTNAME=db.example.com
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/ksm-config: "keeper-credentials"
   keeper.security/inject-env-vars: "true"
   keeper.security/env-prefix: "DB_"
   keeper.security/secret: "database-credentials"
@@ -250,7 +250,7 @@ For fine-grained control, use YAML configuration:
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/ksm-config: "keeper-credentials"
   keeper.security/config: |
     secrets:
       - record: database-credentials
@@ -326,7 +326,7 @@ metadata:
   name: my-app
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-credentials"
+    keeper.security/ksm-config: "keeper-credentials"
     keeper.security/inject-as-k8s-secret: "true"
     keeper.security/k8s-secret-name: "app-secrets"
     keeper.security/secret: "database-credentials"
@@ -351,7 +351,7 @@ Map Keeper fields to specific Secret keys:
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/ksm-config: "keeper-credentials"
   keeper.security/config: |
     secrets:
       - record: "postgres-prod"
@@ -382,7 +382,7 @@ Enable automatic Secret updates when secrets change in Keeper:
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/ksm-config: "keeper-credentials"
   keeper.security/inject-as-k8s-secret: "true"
   keeper.security/k8s-secret-name: "app-secrets"
   keeper.security/k8s-secret-rotation: "true"
@@ -412,7 +412,7 @@ annotations:
 
 | Annotation | Default | Description |
 |------------|---------|-------------|
-| `keeper.security/auth-secret` | Required | K8s secret name with KSM config |
+| `keeper.security/ksm-config` | Required | K8s secret name with KSM config |
 | `keeper.security/auth-method` | `"secret"` | Auth method (see below) |
 
 #### Cloud Provider Authentication
@@ -486,7 +486,7 @@ For environments with SSL inspection (Zscaler, Palo Alto, Cisco Umbrella, etc.):
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/ksm-config: "keeper-credentials"
   keeper.security/secret: "my-secret"
   keeper.security/ca-cert-configmap: "corporate-ca"  # For SSL inspection
 ```
@@ -518,7 +518,7 @@ If you prefer using record UIDs instead of titles:
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-auth"
+  keeper.security/ksm-config: "keeper-auth"
   keeper.security/secret: "OqPt3Vd37My7G8rTb-8Q"  # 22-char UID
 ```
 
@@ -531,7 +531,7 @@ Use Keeper notation for precise field extraction with custom output paths:
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-auth"
+  keeper.security/ksm-config: "keeper-auth"
   # Format: keeper://UID/field/FIELDNAME:OUTPUT_PATH
   keeper.security/secret-password: "keeper://QabbPIdM8Unw4hwVM-F8VQ/field/password:/app/secrets/db-pass"
   keeper.security/secret-login: "keeper://QabbPIdM8Unw4hwVM-F8VQ/field/login:/app/secrets/db-user"
@@ -562,7 +562,7 @@ You can now use folder paths in Keeper notation to reference secrets by their lo
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-auth"
+  keeper.security/ksm-config: "keeper-auth"
 
   # Reference secret by folder path + title
   keeper.security/secret-db-pass: "keeper://Production/Databases/mysql-credentials/field/password:/app/secrets/db-pass"
@@ -587,7 +587,7 @@ Download file attachments from Keeper records:
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-auth"
+  keeper.security/ksm-config: "keeper-auth"
   # Format: RECORD_TITLE:FILENAME:OUTPUT_PATH
   keeper.security/file-cert: "Database Credentials:cert.pem:/app/certs/server.pem"
   keeper.security/file-key: "Database Credentials:key.pem:/app/certs/server.key"
@@ -606,7 +606,7 @@ Fetch all secrets from a Keeper folder:
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-auth"
+  keeper.security/ksm-config: "keeper-auth"
   keeper.security/folder-uid: "FOLDER_UID_HERE"
   keeper.security/folder-path: "/app/folder-secrets"  # Output directory
 ```
@@ -620,7 +620,7 @@ You can now reference folders by their path instead of UID:
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-auth"
+  keeper.security/ksm-config: "keeper-auth"
   keeper.security/folder: "Production/Databases"  # Folder path
   keeper.security/folder-path: "/app/db-secrets"  # Output directory
 ```
@@ -640,7 +640,7 @@ metadata:
   name: my-app
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-auth"
+    keeper.security/ksm-config: "keeper-auth"
 
     # Standard secret (full record as JSON)
     keeper.security/secret: "Application Config"

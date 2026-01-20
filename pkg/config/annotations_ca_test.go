@@ -19,7 +19,7 @@ func TestParseAnnotations_CACert(t *testing.T) {
 			name: "CA cert from secret",
 			annotations: map[string]string{
 				AnnotationInject:       "true",
-				AnnotationAuthSecret:   "keeper-auth",
+				AnnotationKSMConfig:   "keeper-auth",
 				AnnotationSecret:       "test-secret",
 				AnnotationCACertSecret: "corporate-ca",
 			},
@@ -31,7 +31,7 @@ func TestParseAnnotations_CACert(t *testing.T) {
 			name: "CA cert from configmap",
 			annotations: map[string]string{
 				AnnotationInject:          "true",
-				AnnotationAuthSecret:      "keeper-auth",
+				AnnotationKSMConfig:      "keeper-auth",
 				AnnotationSecret:          "test-secret",
 				AnnotationCACertConfigMap: "zscaler-ca",
 			},
@@ -43,7 +43,7 @@ func TestParseAnnotations_CACert(t *testing.T) {
 			name: "CA cert with custom key",
 			annotations: map[string]string{
 				AnnotationInject:       "true",
-				AnnotationAuthSecret:   "keeper-auth",
+				AnnotationKSMConfig:   "keeper-auth",
 				AnnotationSecret:       "test-secret",
 				AnnotationCACertSecret: "corporate-ca",
 				AnnotationCACertKey:    "custom-ca.pem",
@@ -56,7 +56,7 @@ func TestParseAnnotations_CACert(t *testing.T) {
 			name: "Both secret and configmap specified - secret takes precedence",
 			annotations: map[string]string{
 				AnnotationInject:          "true",
-				AnnotationAuthSecret:      "keeper-auth",
+				AnnotationKSMConfig:      "keeper-auth",
 				AnnotationSecret:          "test-secret",
 				AnnotationCACertSecret:    "ca-secret",
 				AnnotationCACertConfigMap: "ca-configmap",
@@ -69,7 +69,7 @@ func TestParseAnnotations_CACert(t *testing.T) {
 			name: "No CA cert configured",
 			annotations: map[string]string{
 				AnnotationInject:     "true",
-				AnnotationAuthSecret: "keeper-auth",
+				AnnotationKSMConfig: "keeper-auth",
 				AnnotationSecret:     "test-secret",
 			},
 			wantSecret: "",
@@ -110,7 +110,7 @@ func TestParseAnnotations_CACertValidation(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				AnnotationInject:       "true",
-				AnnotationAuthSecret:   "keeper-auth",
+				AnnotationKSMConfig:   "keeper-auth",
 				AnnotationSecret:       "test-secret",
 				AnnotationCACertSecret: "   ", // whitespace should be handled
 			},

@@ -18,7 +18,7 @@ const (
 	AnnotationSecret     = AnnotationPrefix + "secret"
 	AnnotationSecrets    = AnnotationPrefix + "secrets"
 	AnnotationConfig     = AnnotationPrefix + "config"
-	AnnotationAuthSecret = AnnotationPrefix + "auth-secret"
+	AnnotationKSMConfig = AnnotationPrefix + "ksm-config"
 	AnnotationAuthMethod = AnnotationPrefix + "auth-method"
 
 	// Folder annotations
@@ -190,7 +190,7 @@ func ParseAnnotations(pod *corev1.Pod) (*InjectionConfig, error) {
 	}
 
 	// Parse auth configuration
-	if authSecret, ok := annotations[AnnotationAuthSecret]; ok {
+	if authSecret, ok := annotations[AnnotationKSMConfig]; ok {
 		config.AuthSecretName = authSecret
 	}
 	if authMethod, ok := annotations[AnnotationAuthMethod]; ok {
@@ -309,7 +309,7 @@ func ParseAnnotations(pod *corev1.Pod) (*InjectionConfig, error) {
 	// Parse secrets - Level 3: Custom paths (keeper.security/secret-{name} = path)
 	// Also supports Keeper notation: keeper://UID/field/password:/path
 	for key, value := range annotations {
-		if strings.HasPrefix(key, AnnotationPrefix+"secret-") && key != AnnotationAuthSecret {
+		if strings.HasPrefix(key, AnnotationPrefix+"secret-") && key != AnnotationKSMConfig {
 			name := strings.TrimPrefix(key, AnnotationPrefix+"secret-")
 			secretRef := parseSecretAnnotation(name, value)
 			config.Secrets = append(config.Secrets, secretRef)
@@ -355,7 +355,7 @@ func ParseAnnotations(pod *corev1.Pod) (*InjectionConfig, error) {
 		return nil, fmt.Errorf("injection enabled but no secrets or folders specified")
 	}
 	if config.AuthSecretName == "" && config.AuthMethod == "secret" {
-		return nil, fmt.Errorf("auth-secret annotation required when using secret auth method")
+		return nil, fmt.Errorf("ksm-config annotation required when using secret auth method")
 	}
 
 	return config, nil

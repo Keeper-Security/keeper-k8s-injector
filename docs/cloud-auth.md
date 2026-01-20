@@ -546,7 +546,7 @@ aws secretsmanager create-secret \
 # Step 3: Create IAM role (see above)
 
 # Step 4: Update pod annotations
-# Remove: keeper.security/auth-secret
+# Remove: keeper.security/ksm-config
 # Add: keeper.security/auth-method: "aws-secrets-manager"
 # Add: keeper.security/aws-secret-id: "prod/keeper/ksm-config"
 
@@ -721,7 +721,7 @@ Yes, on different pods. Each pod specifies its auth-method:
 # Pod A: K8s Secret
 annotations:
   keeper.security/auth-method: "secret"
-  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/ksm-config: "keeper-credentials"
 
 # Pod B: AWS Secrets Manager
 annotations:

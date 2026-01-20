@@ -26,7 +26,7 @@ spec:
       annotations:
         # Enable injection
         keeper.security/inject: "true"
-        keeper.security/auth-secret: "keeper-credentials"
+        keeper.security/ksm-config: "keeper-credentials"
 
         # Production database password (field extraction)
         keeper.security/secret-prod-db-pass: "Production/Databases/mysql-prod/field/password:/keeper/secrets/prod-db-password.txt"

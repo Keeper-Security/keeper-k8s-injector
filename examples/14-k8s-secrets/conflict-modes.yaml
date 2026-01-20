@@ -10,7 +10,7 @@ metadata:
   name: overwrite-mode-demo
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-credentials"
+    keeper.security/ksm-config: "keeper-credentials"
     keeper.security/inject-as-k8s-secret: "true"
     keeper.security/k8s-secret-name: "shared-secret"
     keeper.security/k8s-secret-mode: "overwrite"
@@ -29,7 +29,7 @@ metadata:
   name: merge-mode-demo
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-credentials"
+    keeper.security/ksm-config: "keeper-credentials"
     keeper.security/inject-as-k8s-secret: "true"
     keeper.security/k8s-secret-name: "merged-secret"
     keeper.security/k8s-secret-mode: "merge"
@@ -48,7 +48,7 @@ metadata:
   name: skip-mode-demo
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-credentials"
+    keeper.security/ksm-config: "keeper-credentials"
     keeper.security/inject-as-k8s-secret: "true"
     keeper.security/k8s-secret-name: "persistent-secret"
     keeper.security/k8s-secret-mode: "skip-if-exists"
@@ -67,7 +67,7 @@ metadata:
   name: fail-mode-demo
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-credentials"
+    keeper.security/ksm-config: "keeper-credentials"
     keeper.security/inject-as-k8s-secret: "true"
     keeper.security/k8s-secret-name: "unique-secret"
     keeper.security/k8s-secret-mode: "fail"

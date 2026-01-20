@@ -149,7 +149,7 @@ Edit `hello-secrets.yaml` to customize:
 | Annotation | Description | Default |
 |------------|-------------|---------|
 | `keeper.security/secret` | Title of your Keeper record | `demo-secret` |
-| `keeper.security/auth-secret` | K8s secret with KSM config | `keeper-credentials` |
+| `keeper.security/ksm-config` | K8s secret with KSM config | `keeper-credentials` |
 | `keeper.security/refresh-interval` | How often to check for updates | `30s` |
 
 ## Cleanup

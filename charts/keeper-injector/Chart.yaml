@@ -2,8 +2,8 @@ apiVersion: v2
 name: keeper-injector
 description: Keeper Secrets Manager Kubernetes Injector - Inject secrets into pods at runtime
 type: application
-version: 0.9.0
-appVersion: "0.9.0"
+version: 0.10.0
+appVersion: "0.10.0"
 kubeVersion: ">=1.21.0-0"
 home: https://www.keepersecurity.com
 icon: https://keepersecurity.com/vault/images/keeper_icons/icon_rounded_256.png
@@ -34,25 +34,5 @@ annotations:
     - name: Support
       url: https://github.com/Keeper-Security/keeper-k8s-injector/issues
   artifacthub.io/changes: |
-    - kind: added
-      description: Kubernetes Secret injection - Create K8s Secret objects directly from Keeper secrets
-    - kind: added
-      description: Efficient batching - ONE Keeper API call creates multiple K8s Secrets
-    - kind: added
-      description: Custom key mapping - Map Keeper fields to specific Secret keys
-    - kind: added
-      description: All K8s Secret types supported (Opaque, TLS, Docker config, basic-auth, SSH)
-    - kind: added
-      description: Four conflict resolution modes (overwrite, merge, skip-if-exists, fail)
-    - kind: added
-      description: Optional sidecar rotation for K8s Secrets (updates Secrets automatically)
-    - kind: added
-      description: Owner references for auto-cleanup when pod terminates (configurable)
-    - kind: added
-      description: Seven new annotations for K8s Secret control (name, namespace, mode, type, rotation, owner-ref)
     - kind: changed
-      description: RBAC updated with Secret write permissions (create, update, patch, delete)
-    - kind: changed
-      description: Webhook handler extended with K8s Secret injection phase
-    - kind: security
-      description: K8s Secrets stored in etcd (less secure than file-based tmpfs) - use for GitOps or K8s-native apps only
+      description: Renamed annotation from keeper.security/auth-secret to keeper.security/ksm-config for clarity - users must update pod annotations

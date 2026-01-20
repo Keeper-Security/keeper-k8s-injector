@@ -5,7 +5,7 @@ metadata:
   namespace: keeper-e2e-test
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-auth"
+    keeper.security/ksm-config: "keeper-auth"
     # Test 1: Standard title-based lookup
     keeper.security/secret: "KC-Secret-Demo"
     # Test 2: Keeper notation with UID and field extraction

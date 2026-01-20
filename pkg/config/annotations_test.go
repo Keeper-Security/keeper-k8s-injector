@@ -72,7 +72,7 @@ func TestParseAnnotations_Level1_SingleSecret(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"keeper.security/inject":      "true",
-				"keeper.security/auth-secret": "keeper-auth",
+				"keeper.security/ksm-config": "keeper-auth",
 				"keeper.security/secret":      "database-credentials",
 			},
 		},
@@ -105,7 +105,7 @@ func TestParseAnnotations_Level2_MultipleSecrets(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"keeper.security/inject":      "true",
-				"keeper.security/auth-secret": "keeper-auth",
+				"keeper.security/ksm-config": "keeper-auth",
 				"keeper.security/secrets":     "database-creds, api-keys, tls-cert",
 			},
 		},
@@ -133,7 +133,7 @@ func TestParseAnnotations_Level3_CustomPaths(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"keeper.security/inject":          "true",
-				"keeper.security/auth-secret":     "keeper-auth",
+				"keeper.security/ksm-config":     "keeper-auth",
 				"keeper.security/secret-database": "/app/config/db.json",
 				"keeper.security/secret-api":      "/etc/myapp/api.json",
 			},
@@ -178,7 +178,7 @@ func TestParseAnnotations_BehaviorAnnotations(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"keeper.security/inject":           "true",
-				"keeper.security/auth-secret":      "keeper-auth",
+				"keeper.security/ksm-config":      "keeper-auth",
 				"keeper.security/secret":           "test-secret",
 				"keeper.security/refresh-interval": "10m",
 				"keeper.security/fail-on-error":    "false",
@@ -217,14 +217,14 @@ func TestParseAnnotations_MissingAuthSecret(t *testing.T) {
 			Annotations: map[string]string{
 				"keeper.security/inject": "true",
 				"keeper.security/secret": "test-secret",
-				// Missing auth-secret
+				// Missing ksm-config
 			},
 		},
 	}
 
 	_, err := ParseAnnotations(pod)
 	if err == nil {
-		t.Error("Expected error for missing auth-secret")
+		t.Error("Expected error for missing ksm-config")
 	}
 }
 
@@ -233,7 +233,7 @@ func TestParseAnnotations_NoSecrets(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"keeper.security/inject":      "true",
-				"keeper.security/auth-secret": "keeper-auth",
+				"keeper.security/ksm-config": "keeper-auth",
 				// No secrets specified
 			},
 		},
@@ -271,7 +271,7 @@ func TestParseAnnotations_KeeperNotation(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"keeper.security/inject":         "true",
-				"keeper.security/auth-secret":    "keeper-auth",
+				"keeper.security/ksm-config":    "keeper-auth",
 				"keeper.security/secret-db-pass": "keeper://ABC123def456GHI789jkl/field/password:/app/secrets/db-pass",
 			},
 		},
@@ -300,7 +300,7 @@ func TestParseAnnotations_FileAttachment(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"keeper.security/inject":      "true",
-				"keeper.security/auth-secret": "keeper-auth",
+				"keeper.security/ksm-config": "keeper-auth",
 				"keeper.security/file-cert":   "Database Credentials:cert.pem:/app/certs/cert.pem",
 			},
 		},
@@ -335,7 +335,7 @@ func TestParseAnnotations_FolderSupport(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"keeper.security/inject":      "true",
-				"keeper.security/auth-secret": "keeper-auth",
+				"keeper.security/ksm-config": "keeper-auth",
 				"keeper.security/folder":      "Production/Databases",
 				"keeper.security/folder-path": "/app/db-secrets",
 			},
@@ -380,7 +380,7 @@ folders:
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"keeper.security/inject":      "true",
-				"keeper.security/auth-secret": "keeper-auth",
+				"keeper.security/ksm-config": "keeper-auth",
 				"keeper.security/config":      configYAML,
 			},
 		},
@@ -454,7 +454,7 @@ func TestParseAnnotations_K8sSecretInjection(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"keeper.security/inject":              "true",
-				"keeper.security/auth-secret":         "keeper-creds",
+				"keeper.security/ksm-config":         "keeper-creds",
 				"keeper.security/secret":              "database-credentials",
 				"keeper.security/inject-as-k8s-secret": "true",
 				"keeper.security/k8s-secret-name":     "app-secrets",
@@ -501,7 +501,7 @@ func TestParseAnnotations_K8sSecretMode(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			annotations := map[string]string{
 				"keeper.security/inject":              "true",
-				"keeper.security/auth-secret":         "keeper-creds",
+				"keeper.security/ksm-config":         "keeper-creds",
 				"keeper.security/secret":              "test-secret",
 				"keeper.security/inject-as-k8s-secret": "true",
 				"keeper.security/k8s-secret-name":     "test",
@@ -533,7 +533,7 @@ func TestParseAnnotations_K8sSecretOwnerRef(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
 					"keeper.security/inject":              "true",
-					"keeper.security/auth-secret":         "keeper-creds",
+					"keeper.security/ksm-config":         "keeper-creds",
 					"keeper.security/secret":              "test-secret",
 					"keeper.security/inject-as-k8s-secret": "true",
 					"keeper.security/k8s-secret-name":     "test",
@@ -555,7 +555,7 @@ func TestParseAnnotations_K8sSecretOwnerRef(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
 					"keeper.security/inject":              "true",
-					"keeper.security/auth-secret":         "keeper-creds",
+					"keeper.security/ksm-config":         "keeper-creds",
 					"keeper.security/secret":              "test-secret",
 					"keeper.security/inject-as-k8s-secret": "true",
 					"keeper.security/k8s-secret-name":     "test",
@@ -579,7 +579,7 @@ func TestParseAnnotations_K8sSecretRotation(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"keeper.security/inject":              "true",
-				"keeper.security/auth-secret":         "keeper-creds",
+				"keeper.security/ksm-config":         "keeper-creds",
 				"keeper.security/secret":              "test-secret",
 				"keeper.security/inject-as-k8s-secret": "true",
 				"keeper.security/k8s-secret-name":     "test",
@@ -613,7 +613,7 @@ secrets:
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"keeper.security/inject":      "true",
-				"keeper.security/auth-secret": "keeper-creds",
+				"keeper.security/ksm-config": "keeper-creds",
 				"keeper.security/config":      yamlConfig,
 			},
 		},
@@ -668,7 +668,7 @@ secrets:
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"keeper.security/inject":      "true",
-				"keeper.security/auth-secret": "keeper-creds",
+				"keeper.security/ksm-config": "keeper-creds",
 				"keeper.security/config":      yamlConfig,
 			},
 		},
@@ -701,7 +701,7 @@ folders:
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"keeper.security/inject":      "true",
-				"keeper.security/auth-secret": "keeper-creds",
+				"keeper.security/ksm-config": "keeper-creds",
 				"keeper.security/config":      yamlConfig,
 			},
 		},

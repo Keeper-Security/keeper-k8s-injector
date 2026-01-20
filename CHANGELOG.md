@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - TBD
+
+### Changed
+
+- **BREAKING**: Renamed annotation `keeper.security/auth-secret` to `keeper.security/ksm-config` for clarity
+  - Update all pod annotations from `auth-secret` to `ksm-config`
+  - The annotation contains KSM configuration, new name better reflects its purpose
+  - All examples and documentation updated to reflect the new annotation name
+
 ## [0.9.0] - 2026-01-19
 
 ### Added

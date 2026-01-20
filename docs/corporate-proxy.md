@@ -69,7 +69,7 @@ metadata:
   name: my-app
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-credentials"
+    keeper.security/ksm-config: "keeper-credentials"
     keeper.security/secret: "my-secret"
     keeper.security/ca-cert-configmap: "zscaler-ca"  # ← Add this
 spec:

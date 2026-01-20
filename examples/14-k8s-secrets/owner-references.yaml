@@ -10,7 +10,7 @@ metadata:
   name: auto-cleanup-demo
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-credentials"
+    keeper.security/ksm-config: "keeper-credentials"
     keeper.security/inject-as-k8s-secret: "true"
     keeper.security/k8s-secret-name: "ephemeral-secret"
     keeper.security/secret: "demo-secret"
@@ -29,7 +29,7 @@ metadata:
   name: persistent-secret-demo
   annotations:
     keeper.security/inject: "true"
-    keeper.security/auth-secret: "keeper-credentials"
+    keeper.security/ksm-config: "keeper-credentials"
     keeper.security/inject-as-k8s-secret: "true"
     keeper.security/k8s-secret-name: "persistent-secret"
     keeper.security/k8s-secret-owner-ref: "false"

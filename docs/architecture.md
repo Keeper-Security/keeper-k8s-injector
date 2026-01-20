@@ -171,7 +171,7 @@ API Server ──HTTP POST──▶ Webhook Controller
 Webhook Controller:
   1. Check annotations
       ├─ keeper.security/inject == "true"? Continue : Skip
-      └─ Validate required annotations (auth-secret, etc.)
+      └─ Validate required annotations (ksm-config, etc.)
 
   2. Build injection config
       ├─ Parse annotations

@@ -36,7 +36,7 @@ By default, a sidecar container runs alongside your app and periodically checks 
 ```yaml
 annotations:
   keeper.security/inject: "true"
-  keeper.security/auth-secret: "keeper-credentials"
+  keeper.security/ksm-config: "keeper-credentials"
   keeper.security/secret: "database-credentials"
   keeper.security/refresh-interval: "5m"  # Check every 5 minutes
 ```
