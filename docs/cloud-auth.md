@@ -40,11 +40,11 @@ Store Keeper Secrets Manager configuration in cloud secrets stores (AWS Secrets 
 
 ### Step 1: Store KSM Config in AWS Secrets Manager
 
-```bash
-# Get your KSM config (base64 string)
-# From Keeper: Vault → Secrets Manager → Application → Devices → Add Device → Base64
+Get your KSM config from Keeper:
+- Go to Keeper: Vault → Secrets Manager → Application → Devices → Add Device → Base64
+- Copy the base64 string
 
-# Store in AWS Secrets Manager
+```bash
 aws secretsmanager create-secret \
   --name prod/keeper/ksm-config \
   --description "Keeper Secrets Manager configuration" \
@@ -52,9 +52,43 @@ aws secretsmanager create-secret \
   --region us-west-2
 ```
 
-### Step 2: Create IAM Role
+**Example output:**
+```json
+{
+  "ARN": "arn:aws:secretsmanager:us-west-2:123456789012:secret:prod/keeper/ksm-config-AbCdEf",
+  "Name": "prod/keeper/ksm-config"
+}
+```
 
-Create IAM role with trust policy for IRSA:
+### Step 2: Get EKS Cluster OIDC Provider
+
+**What is this?** Your EKS cluster name is what you named it when you created it (e.g., `my-prod-cluster`). You need the OIDC provider ID to configure IAM trust policies.
+
+```bash
+# Get your cluster name (if you don't know it)
+aws eks list-clusters --region us-west-2
+
+# Get the OIDC provider URL for your cluster
+aws eks describe-cluster --name YOUR-CLUSTER-NAME --region us-west-2 \
+  --query "cluster.identity.oidc.issuer" --output text
+```
+
+**Example output:**
+```
+https://oidc.eks.us-west-2.amazonaws.com/id/A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6
+                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                           This is your CLUSTER_ID
+```
+
+**Save these values** - you'll need them in the next step:
+- `CLUSTER_NAME`: Your EKS cluster name (e.g., `my-prod-cluster`)
+- `CLUSTER_ID`: The hex string after `/id/` (e.g., `A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6`)
+- `REGION`: Your AWS region (e.g., `us-west-2`)
+- `ACCOUNT_ID`: Your AWS account ID (12 digits, get with `aws sts get-caller-identity --query Account --output text`)
+
+### Step 3: Create IAM Role
+
+Create IAM role with trust policy for IRSA (replace placeholders with values from Step 2):
 
 ```json
 {
@@ -70,6 +104,28 @@ Create IAM role with trust policy for IRSA:
         "StringEquals": {
           "oidc.eks.REGION.amazonaws.com/id/CLUSTER_ID:sub": "system:serviceaccount:NAMESPACE:SERVICE_ACCOUNT_NAME",
           "oidc.eks.REGION.amazonaws.com/id/CLUSTER_ID:aud": "sts.amazonaws.com"
+        }
+      }
+    }
+  ]
+}
+```
+
+**Real example with actual values:**
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::123456789012:oidc-provider/oidc.eks.us-west-2.amazonaws.com/id/A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "oidc.eks.us-west-2.amazonaws.com/id/A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6:sub": "system:serviceaccount:production:myapp-sa",
+          "oidc.eks.us-west-2.amazonaws.com/id/A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6:aud": "sts.amazonaws.com"
         }
       }
     }
@@ -94,7 +150,7 @@ Attach policy for Secrets Manager access:
 }
 ```
 
-### Step 3: Create Kubernetes ServiceAccount
+### Step 4: Create Kubernetes ServiceAccount
 
 ```yaml
 apiVersion: v1
@@ -106,7 +162,7 @@ metadata:
     eks.amazonaws.com/role-arn: arn:aws:iam::123456789:role/keeper-secrets-access
 ```
 
-### Step 4: Use in Pod
+### Step 5: Use in Pod
 
 ```yaml
 apiVersion: v1
@@ -126,7 +182,7 @@ spec:
       image: myapp:latest
 ```
 
-### Step 5: Verify
+### Step 6: Verify
 
 ```bash
 # Check sidecar logs
@@ -167,19 +223,41 @@ kubectl exec pod/my-app -- cat /keeper/secrets/my-database-creds.json
 3. **GCP service account** with Secret Manager access
 4. **K8s ServiceAccount** with GCP SA binding
 
-### Step 1: Store KSM Config in GCP Secret Manager
+### Step 1: Get GCP Project and Cluster Info
+
+**What is project name?** Your GCP project ID (e.g., `my-company-prod`). Find it with:
 
 ```bash
-# Get your KSM config (base64 string)
+# List your GCP projects
+gcloud projects list
 
-# Store in GCP Secret Manager
+# Get current project
+gcloud config get-value project
+```
+
+**Example output:**
+```
+PROJECT_ID         NAME              PROJECT_NUMBER
+my-company-prod    Production        123456789012
+```
+
+### Step 2: Store KSM Config in GCP Secret Manager
+
+Get your KSM config from Keeper, then:
+
+```bash
 echo -n '<your-base64-ksm-config>' | gcloud secrets create ksm-config \
   --data-file=- \
-  --project=my-project \
+  --project=my-company-prod \
   --replication-policy=automatic
 ```
 
-### Step 2: Create GCP Service Account
+**Example output:**
+```
+Created secret [ksm-config].
+```
+
+### Step 3: Create GCP Service Account
 
 ```bash
 # Create service account
@@ -195,7 +273,7 @@ gcloud secrets add-iam-policy-binding ksm-config \
   --role="roles/secretmanager.secretAccessor"
 ```
 
-### Step 3: Bind to Kubernetes ServiceAccount
+### Step 4: Bind to Kubernetes ServiceAccount
 
 ```bash
 # Allow K8s SA to impersonate GCP SA
@@ -265,19 +343,44 @@ spec:
 3. **Managed identity** with Key Vault access
 4. **Federated credential** linking identity to K8s SA
 
-### Step 1: Store KSM Config in Azure Key Vault
+### Step 1: Get AKS Cluster and Resource Info
+
+**What are these?** Your resource group and cluster name. Find them with:
 
 ```bash
-# Get your KSM config (base64 string)
+# List resource groups
+az group list --output table
 
-# Store in Key Vault
+# List AKS clusters in a resource group
+az aks list --resource-group mygroup --output table
+```
+
+**Example output:**
+```
+Name             Location    ResourceGroup
+my-prod-cluster  eastus      mygroup
+```
+
+### Step 2: Store KSM Config in Azure Key Vault
+
+Get your KSM config from Keeper, then:
+
+```bash
 az keyvault secret set \
   --vault-name mykeyvault \
   --name ksm-config \
   --value '<your-base64-ksm-config>'
 ```
 
-### Step 2: Create Managed Identity
+**Example output:**
+```json
+{
+  "id": "https://mykeyvault.vault.azure.net/secrets/ksm-config/abc123",
+  "name": "ksm-config"
+}
+```
+
+### Step 3: Create Managed Identity
 
 ```bash
 # Create user-assigned managed identity
@@ -297,12 +400,24 @@ az keyvault set-policy \
   --secret-permissions get
 ```
 
-### Step 3: Create Federated Credential
+### Step 4: Get AKS OIDC Issuer
+
+**Get the OIDC issuer URL** (needed for federated credential):
 
 ```bash
-# Get AKS OIDC issuer URL
-OIDC_ISSUER=$(az aks show --name mycluster --resource-group mygroup --query oidcIssuerProfile.issuerUrl -o tsv)
+# Replace 'my-prod-cluster' with your actual cluster name from Step 1
+OIDC_ISSUER=$(az aks show --name my-prod-cluster --resource-group mygroup --query oidcIssuerProfile.issuerUrl -o tsv)
+echo $OIDC_ISSUER
+```
 
+**Example output:**
+```
+https://eastus.oic.prod-aks.azure.com/12345678-1234-1234-1234-123456789012/abcdef01-2345-6789-abcd-ef0123456789/
+```
+
+### Step 5: Create Federated Credential
+
+```bash
 # Create federated credential
 az identity federated-credential create \
   --name keeper-k8s-fed \
@@ -313,7 +428,7 @@ az identity federated-credential create \
   --audience api://AzureADTokenExchange
 ```
 
-### Step 4: Create Kubernetes ServiceAccount
+### Step 6: Create Kubernetes ServiceAccount
 
 ```yaml
 apiVersion: v1
@@ -325,7 +440,7 @@ metadata:
     azure.workload.identity/client-id: "12345678-1234-1234-1234-123456789012"
 ```
 
-### Step 5: Use in Pod
+### Step 7: Use in Pod
 
 ```yaml
 apiVersion: v1
