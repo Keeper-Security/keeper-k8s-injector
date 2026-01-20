@@ -31,6 +31,18 @@ Store Keeper Secrets Manager configuration in cloud secrets stores (AWS Secrets 
 
 ## AWS Secrets Manager (EKS)
 
+**💡 Recommended**: Clone the repo and follow the working example with complete setup scripts:
+
+```bash
+git clone https://github.com/Keeper-Security/keeper-k8s-injector.git
+cd keeper-k8s-injector/examples/08-aws-secrets-manager
+# Follow the README.md with step-by-step instructions
+```
+
+The example includes ready-to-use YAML files and helper scripts. The instructions below are for reference.
+
+---
+
 ### Prerequisites
 
 1. **EKS cluster** with OIDC provider (enabled by default)
@@ -216,6 +228,18 @@ kubectl exec pod/my-app -- cat /keeper/secrets/my-database-creds.json
 
 ## GCP Secret Manager (GKE)
 
+**💡 Recommended**: Clone the repo and follow the working example with complete setup scripts:
+
+```bash
+git clone https://github.com/Keeper-Security/keeper-k8s-injector.git
+cd keeper-k8s-injector/examples/09-gcp-secret-manager
+# Follow the README.md with step-by-step instructions
+```
+
+The example includes ready-to-use YAML files and helper scripts. The instructions below are for reference.
+
+---
+
 ### Prerequisites
 
 1. **GKE cluster** with Workload Identity enabled
@@ -335,6 +359,18 @@ spec:
 ---
 
 ## Azure Key Vault (AKS)
+
+**💡 Recommended**: Clone the repo and follow the working example with complete setup scripts:
+
+```bash
+git clone https://github.com/Keeper-Security/keeper-k8s-injector.git
+cd keeper-k8s-injector/examples/10-azure-key-vault
+# Follow the README.md with step-by-step instructions
+```
+
+The example includes ready-to-use YAML files and helper scripts. The instructions below are for reference.
+
+---
 
 ### Prerequisites
 
