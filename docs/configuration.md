@@ -668,7 +668,7 @@ spec:
 ### Installation
 
 ```bash
-helm repo add keeper https://keeper-security.github.io/keeper-k8s-injector
+helm repo add keeper https://keeper-security.github.io/helm-charts
 helm install keeper-injector keeper/keeper-injector -f values.yaml
 ```
 

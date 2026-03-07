@@ -23,17 +23,11 @@ helm upgrade --install keeper-injector oci://registry-1.docker.io/keeper/keeper-
 ### Option 2: Helm (Repository)
 
 ```bash
-helm repo add keeper https://keeper-security.github.io/keeper-k8s-injector
+helm repo add keeper https://keeper-security.github.io/helm-charts
 helm repo update
 helm upgrade --install keeper-injector keeper/keeper-injector \
   --namespace keeper-security \
   --create-namespace
-```
-
-### Option 3: kubectl (Direct YAML)
-
-```bash
-kubectl apply -f https://github.com/Keeper-Security/keeper-k8s-injector/releases/latest/download/install.yaml
 ```
 
 Verify installation:
@@ -218,8 +212,9 @@ spec:
 ## Where to Find Charts & Images
 
 - **Helm Chart (OCI)**: `oci://registry-1.docker.io/keeper/keeper-injector`
-- **Helm Chart (HTTP)**: https://keeper-security.github.io/keeper-k8s-injector
-- **ArtifactHub**: https://artifacthub.io/packages/helm/keeper-injector/keeper-injector
+- **Helm Chart (HTTP)**: https://keeper-security.github.io/helm-charts
+- **Helm Chart Repo**: https://github.com/Keeper-Security/helm-charts
+- **ArtifactHub**: https://artifacthub.io/packages/helm/keeper-security/keeper-injector
 - **Docker Images**:
   - `keeper/injector-webhook` on [Docker Hub](https://hub.docker.com/r/keeper/injector-webhook)
   - `keeper/injector-sidecar` on [Docker Hub](https://hub.docker.com/r/keeper/injector-sidecar)

@@ -2,15 +2,13 @@
 
 ## Overview
 
-This project publishes to multiple locations:
+This repo publishes Docker images. The Helm chart is managed separately.
 
 | What | Where | URL |
 |------|-------|-----|
 | Docker Images | Docker Hub | `keeper/injector-webhook`, `keeper/injector-sidecar` |
-| Helm Chart (OCI) | Docker Hub | `oci://registry-1.docker.io/keeper/keeper-injector` |
-| Helm Chart (HTTP) | GitHub Pages | `https://keeper-security.github.io/keeper-k8s-injector` |
-| GitHub Release | GitHub | Includes `.tgz` and `install.yaml` |
-| ArtifactHub | artifacthub.io | Auto-syncs from GitHub Pages |
+| GitHub Release | GitHub | Auto-generated release notes |
+| Helm Chart | Separate repo | [Keeper-Security/helm-charts](https://github.com/Keeper-Security/helm-charts) |
 
 ## How to Release a New Version
 
@@ -36,39 +34,27 @@ git push origin vX.Y.Z
 
 ### 3. What Happens Automatically
 
-The release workflow (`.github/workflows/release.yaml`) will:
+The release workflow (`.github/workflows/build-and-release.yaml`) will:
 
 1. Run tests
 2. Build multi-arch Docker images (amd64, arm64)
 3. Push images to Docker Hub (`keeper/injector-webhook`, `keeper/injector-sidecar`)
-4. Package Helm chart with the new version
-5. Push Helm chart to Docker Hub OCI registry
-6. Update GitHub Pages Helm repository (gh-pages branch)
-7. Create GitHub Release with artifacts
+4. Create GitHub Release with auto-generated notes
 
-### 4. Verify the Release
+### 4. Update the Helm Chart
+
+After Docker images are pushed, update the Helm chart in the [helm-charts](https://github.com/Keeper-Security/helm-charts) repo:
+
+1. Update `appVersion` in `charts/keeper-injector/Chart.yaml` to match the new tag
+2. Bump `version` in `charts/keeper-injector/Chart.yaml`
+3. Update `artifacthub.io/changes` annotation with the changelog
+4. Push to main — the helm-charts CI will package and publish the chart
+
+### 5. Verify the Release
 
 - **GitHub Release**: https://github.com/Keeper-Security/keeper-k8s-injector/releases
 - **Docker Hub**: https://hub.docker.com/r/keeper/injector-webhook
-- **ArtifactHub**: https://artifacthub.io/packages/helm/keeper-injector/keeper-injector
-
-## Installation Methods for Users
-
-### Method 1: Helm (OCI Registry)
-```bash
-helm upgrade --install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector --version X.Y.Z
-```
-
-### Method 2: Helm (HTTP Repository)
-```bash
-helm repo add keeper https://keeper-security.github.io/keeper-k8s-injector
-helm upgrade --install keeper-injector keeper/keeper-injector --version X.Y.Z
-```
-
-### Method 3: kubectl (Direct YAML)
-```bash
-kubectl apply -f https://github.com/Keeper-Security/keeper-k8s-injector/releases/download/vX.Y.Z/install.yaml
-```
+- **ArtifactHub**: https://artifacthub.io/packages/helm/keeper-security/keeper-injector
 
 ## Required Secrets (GitHub Actions)
 
@@ -79,45 +65,10 @@ These are configured in the `prod` environment:
 | `DOCKERHUB_USERNAME` | Docker Hub username |
 | `DOCKERHUB_TOKEN` | Docker Hub access token |
 
-## Branch Structure
-
-| Branch | Purpose |
-|--------|---------|
-| `main` | Source code, development |
-| `gh-pages` | Helm repository (index.yaml, .tgz files, artifacthub-repo.yml) |
-
-## ArtifactHub Verified Publisher
-
-The `gh-pages` branch contains `artifacthub-repo.yml` with:
-```yaml
-repositoryID: d64343f9-be2e-45ab-a82d-3180c9b03dff
-```
-
-This enables the "Verified Publisher" badge on ArtifactHub.
-
 ## Troubleshooting
 
 ### Release workflow failed?
 
-1. Check the workflow logs: Actions → Release → Click failed run
+1. Check the workflow logs: Actions > Build and Release > Click failed run
 2. Common issues:
    - Docker Hub auth failed: Check `DOCKERHUB_TOKEN` secret
-   - Helm push failed: Ensure Helm registry login step exists
-
-### ArtifactHub not updating?
-
-- ArtifactHub scans every ~30 minutes
-- Force rescan: ArtifactHub Control Panel → Repositories → Click refresh icon
-
-### gh-pages not updating?
-
-The release workflow updates gh-pages automatically. If manual update needed:
-```bash
-git checkout gh-pages
-# Download chart from release
-gh release download vX.Y.Z --pattern "*.tgz"
-# Regenerate index
-helm repo index . --url https://keeper-security.github.io/keeper-k8s-injector --merge index.yaml
-git add -A && git commit -m "Add vX.Y.Z" && git push
-git checkout main
-```

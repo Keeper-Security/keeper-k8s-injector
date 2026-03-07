@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-1.25+-blue.svg)](https://kubernetes.io/)
 [![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8.svg)](https://go.dev/)
-[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/keeper-injector)](https://artifacthub.io/packages/helm/keeper-injector/keeper-injector)
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/keeper-security)](https://artifacthub.io/packages/helm/keeper-security/keeper-injector)
 
 Automatically inject secrets from [Keeper Secrets Manager](https://www.keepersecurity.com/secrets-manager.html) into your Kubernetes pods at runtime.
 
@@ -33,7 +33,7 @@ helm upgrade --install keeper-injector oci://registry-1.docker.io/keeper/keeper-
 ### Option 2: Helm (Repository)
 
 ```bash
-helm repo add keeper https://keeper-security.github.io/keeper-k8s-injector
+helm repo add keeper https://keeper-security.github.io/helm-charts
 helm repo update
 helm upgrade --install keeper-injector keeper/keeper-injector \
   --namespace keeper-security \
@@ -210,7 +210,8 @@ TLS certificates are auto-generated. [cert-manager](https://cert-manager.io/) is
 
 ## Links
 
-- [ArtifactHub](https://artifacthub.io/packages/helm/keeper-injector/keeper-injector)
+- [Helm Charts](https://github.com/Keeper-Security/helm-charts)
+- [ArtifactHub](https://artifacthub.io/packages/helm/keeper-security/keeper-injector)
 - [Docker Hub - Webhook](https://hub.docker.com/r/keeper/injector-webhook)
 - [Docker Hub - Sidecar](https://hub.docker.com/r/keeper/injector-sidecar)
 - [Keeper Secrets Manager](https://docs.keeper.io/secrets-manager/)

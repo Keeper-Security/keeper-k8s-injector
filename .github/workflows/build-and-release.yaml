@@ -3,13 +3,14 @@
 # WORKFLOW LOGIC:
 #   - Pull Request: test + lint (fast feedback)
 #   - Push to main: test + lint + build images (validation)
-#   - Tag push (v*): test + lint + build + push images + Helm + GitHub Release + GitHub Pages
+#   - Tag push (v*): test + lint + build + push Docker images + GitHub Release
 #
 # PUBLISHED ARTIFACTS (on tag only):
 #   - Docker: keeper/injector-webhook:X.Y.Z, keeper/injector-sidecar:X.Y.Z
-#   - Helm OCI: oci://registry-1.docker.io/keeper/keeper-injector
-#   - Helm HTTP: https://keeper-security.github.io/keeper-k8s-injector
-#   - GitHub Release: .tgz chart + install.yaml manifest
+#   - GitHub Release: with auto-generated release notes
+#
+# Helm chart is published separately from:
+#   https://github.com/Keeper-Security/helm-charts
 #
 # REQUIRED SECRETS (in 'prod' environment):
 #   - DOCKERHUB_USERNAME
@@ -21,12 +22,12 @@ on:
   push:
     branches: [main]
     tags:
-      - 'v*'
+      - "v*"
   pull_request:
     branches: [main]
 
 env:
-  GO_VERSION: '1.25.6'
+  GO_VERSION: "1.25.6"
 
 jobs:
   # ========================================
@@ -119,7 +120,8 @@ jobs:
 
   # ========================================
   # RELEASE (runs on tag push only)
-  # Publishes: Docker images, Helm chart, GitHub release, GitHub Pages
+  # Publishes: Docker images + GitHub Release
+  # Helm chart is managed in https://github.com/Keeper-Security/helm-charts
   # ========================================
   release:
     name: Release
@@ -176,68 +178,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Package and push Helm chart
-      - name: Install Helm
-        uses: azure/setup-helm@v4
-        with:
-          version: v3.14.0
-
-      - name: Login to Docker Hub for Helm OCI
-        run: |
-          echo "${{ secrets.DOCKERHUB_TOKEN }}" | helm registry login registry-1.docker.io -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
-
-      - name: Update Helm chart version
-        run: |
-          sed -i "s/^version:.*/version: ${{ steps.version.outputs.VERSION }}/" charts/keeper-injector/Chart.yaml
-          sed -i "s/^appVersion:.*/appVersion: \"${{ steps.version.outputs.VERSION }}\"/" charts/keeper-injector/Chart.yaml
-
-      - name: Package Helm chart
-        run: |
-          helm package charts/keeper-injector -d .helm-packages
-
-      - name: Push Helm chart to Docker Hub OCI
-        continue-on-error: true
-        run: |
-          helm push .helm-packages/keeper-injector-${{ steps.version.outputs.VERSION }}.tgz oci://registry-1.docker.io/keeper
-
-      # Generate kubectl install manifest
-      - name: Generate install manifest
-        run: |
-          helm template keeper-injector charts/keeper-injector \
-            --namespace keeper-security \
-            --set image.tag=${{ steps.version.outputs.VERSION }} \
-            --set sidecar.tag=${{ steps.version.outputs.VERSION }} \
-            > deploy/install.yaml
-
       # Create GitHub Release
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: |
-            .helm-packages/*.tgz
-            deploy/install.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Update GitHub Pages Helm repository
-      - name: Checkout gh-pages branch
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          path: gh-pages
-
-      - name: Update Helm repository index
-        run: |
-          cp .helm-packages/keeper-injector-${{ steps.version.outputs.VERSION }}.tgz gh-pages/
-          cd gh-pages
-          helm repo index . --url https://keeper-security.github.io/keeper-k8s-injector --merge index.yaml
-
-      - name: Push to gh-pages
-        run: |
-          cd gh-pages
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Add keeper-injector-${{ steps.version.outputs.VERSION }}"
-          git push

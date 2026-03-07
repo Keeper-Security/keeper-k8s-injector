@@ -143,24 +143,8 @@ Before any release:
 - [ ] All formats/features documented in docs/features.md
 - [ ] Working example exists in examples/
 - [ ] CHANGELOG.md updated following guidelines
-- [ ] Chart.yaml artifacthub.io/changes annotation updated
 - [ ] No discrepancies between docs and code
-
-### Changelog Files
-
-**Two changelog files must be updated for every release:**
-
-1. **CHANGELOG.md** (root directory)
-   - Full detailed changelog following [Keep a Changelog](https://keepachangelog.com/) format
-   - Includes all versions and changes
-   - Detailed descriptions and examples
-
-2. **charts/keeper-injector/Chart.yaml** (artifacthub.io/changes annotation)
-   - Brief, structured changelog for ArtifactHub display
-   - Only includes changes for the CURRENT version
-   - Uses YAML format with kinds: `added`, `changed`, `deprecated`, `removed`, `fixed`, `security`
-   - See `charts/keeper-injector/CHANGELOG-TEMPLATE.yaml` for format
-   - Documented in `charts/keeper-injector/README.md` (Maintainers section)
+- [ ] After release, update Helm chart in [Keeper-Security/helm-charts](https://github.com/Keeper-Security/helm-charts)
 
 ### Enforcement
 
@@ -169,4 +153,3 @@ Claude must verify documentation accuracy before ANY release. Run comprehensive 
 - Documented formats vs implemented formats
 - Documented auth methods vs implemented auth methods
 - Example code vs actual behavior
-- Both CHANGELOG.md and Chart.yaml updated

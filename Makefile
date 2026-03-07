@@ -26,7 +26,7 @@ LDFLAGS := -w -s \
 # Docker run command for dev container
 DOCKER_RUN = docker run --rm -v $(PWD):/app -w /app $(DEV_IMAGE)
 
-.PHONY: all build test clean docker-build docker-push helm-lint dev-image
+.PHONY: all build test clean docker-build docker-push dev-image
 
 all: build
 
@@ -111,20 +111,6 @@ docker-push-sidecar:
 	docker push $(SIDECAR_IMAGE):$(VERSION)
 	docker push $(SIDECAR_IMAGE):latest
 
-## Helm targets
-
-helm-lint:
-	@echo "Linting Helm chart..."
-	helm lint charts/keeper-injector
-
-helm-template:
-	@echo "Rendering Helm templates..."
-	helm template keeper-injector charts/keeper-injector
-
-helm-package:
-	@echo "Packaging Helm chart..."
-	helm package charts/keeper-injector -d dist/
-
 ## Local development
 
 dev-cluster:
@@ -135,10 +121,8 @@ dev-deploy: docker-build
 	@echo "Loading images into Kind..."
 	kind load docker-image $(WEBHOOK_IMAGE):$(VERSION) --name keeper-injector-dev
 	kind load docker-image $(SIDECAR_IMAGE):$(VERSION) --name keeper-injector-dev
-	@echo "Installing chart..."
-	helm upgrade --install keeper-injector charts/keeper-injector \
-		--set image.tag=$(VERSION) \
-		--set sidecar.tag=$(VERSION)
+	@echo "Install chart from https://github.com/Keeper-Security/helm-charts"
+	@echo "  helm upgrade --install keeper-injector oci://registry-1.docker.io/keeper/keeper-injector --set image.tag=$(VERSION) --set sidecar.tag=$(VERSION)"
 
 dev-cleanup:
 	@echo "Deleting Kind cluster..."
@@ -194,8 +178,6 @@ help:
 	@echo "  lint            Run linters"
 	@echo "  docker-build    Build Docker images"
 	@echo "  docker-push     Push Docker images"
-	@echo "  helm-lint       Lint Helm chart"
-	@echo "  helm-package    Package Helm chart"
 	@echo "  dev-cluster     Create Kind development cluster"
 	@echo "  dev-deploy      Deploy to Kind cluster"
 	@echo "  clean           Clean build artifacts"
