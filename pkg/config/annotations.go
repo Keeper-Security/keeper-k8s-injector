@@ -18,7 +18,7 @@ const (
 	AnnotationSecret     = AnnotationPrefix + "secret"
 	AnnotationSecrets    = AnnotationPrefix + "secrets"
 	AnnotationConfig     = AnnotationPrefix + "config"
-	AnnotationKSMConfig = AnnotationPrefix + "ksm-config"
+	AnnotationKSMConfig  = AnnotationPrefix + "ksm-config"
 	AnnotationAuthMethod = AnnotationPrefix + "auth-method"
 
 	// Folder annotations
@@ -47,16 +47,16 @@ const (
 	AnnotationK8sSecretOwnerRef  = AnnotationPrefix + "k8s-secret-owner-ref" // Add owner reference for auto-cleanup (default: true)
 
 	// CA Certificate annotations (for corporate proxies/SSL inspection)
-	AnnotationCACertSecret    = AnnotationPrefix + "ca-cert-secret"     // K8s Secret name with CA cert
-	AnnotationCACertConfigMap = AnnotationPrefix + "ca-cert-configmap"  // K8s ConfigMap name with CA cert
-	AnnotationCACertKey       = AnnotationPrefix + "ca-cert-key"        // Key in Secret/ConfigMap (default: "ca.crt")
+	AnnotationCACertSecret    = AnnotationPrefix + "ca-cert-secret"    // K8s Secret name with CA cert
+	AnnotationCACertConfigMap = AnnotationPrefix + "ca-cert-configmap" // K8s ConfigMap name with CA cert
+	AnnotationCACertKey       = AnnotationPrefix + "ca-cert-key"       // Key in Secret/ConfigMap (default: "ca.crt")
 
 	// Cloud Secrets Provider annotations (AWS/GCP/Azure)
-	AnnotationAWSSecretID     = AnnotationPrefix + "aws-secret-id"      // AWS Secrets Manager secret ID
-	AnnotationAWSRegion       = AnnotationPrefix + "aws-region"         // AWS region (optional, auto-detect)
-	AnnotationGCPSecretID     = AnnotationPrefix + "gcp-secret-id"      // GCP Secret Manager resource name
-	AnnotationAzureVaultName  = AnnotationPrefix + "azure-vault-name"   // Azure Key Vault name
-	AnnotationAzureSecretName = AnnotationPrefix + "azure-secret-name"  // Azure secret name
+	AnnotationAWSSecretID     = AnnotationPrefix + "aws-secret-id"     // AWS Secrets Manager secret ID
+	AnnotationAWSRegion       = AnnotationPrefix + "aws-region"        // AWS region (optional, auto-detect)
+	AnnotationGCPSecretID     = AnnotationPrefix + "gcp-secret-id"     // GCP Secret Manager resource name
+	AnnotationAzureVaultName  = AnnotationPrefix + "azure-vault-name"  // Azure Key Vault name
+	AnnotationAzureSecretName = AnnotationPrefix + "azure-secret-name" // Azure secret name
 
 	// Default values
 	DefaultSecretsPath     = "/keeper/secrets"
@@ -194,7 +194,14 @@ func ParseAnnotations(pod *corev1.Pod) (*InjectionConfig, error) {
 		config.AuthSecretName = authSecret
 	}
 	if authMethod, ok := annotations[AnnotationAuthMethod]; ok {
-		config.AuthMethod = authMethod
+		switch authMethod {
+		case "", "secret", "aws-secrets-manager", "gcp-secret-manager", "azure-key-vault":
+			config.AuthMethod = authMethod
+		default:
+			// Reject at admission with a clear message instead of letting the sidecar
+			// CrashLoopBackOff later with "unknown auth method".
+			return nil, fmt.Errorf("invalid %s %q (valid: secret, aws-secrets-manager, gcp-secret-manager, azure-key-vault)", AnnotationAuthMethod, authMethod)
+		}
 	}
 
 	// Parse behavior annotations

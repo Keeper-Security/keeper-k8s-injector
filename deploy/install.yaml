@@ -18,7 +18,7 @@ metadata:
   namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.11.0"
 spec:
   minAvailable: 1
   selector:
@@ -33,7 +33,7 @@ metadata:
   namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.11.0"
 ---
 # Source: keeper-injector/templates/configmap.yaml
 apiVersion: v1
@@ -43,7 +43,7 @@ metadata:
   namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.11.0"
 data:
   excluded-namespaces: "kube-system,kube-public,kube-node-lease,cert-manager"
   default-refresh-interval: "5m"
@@ -56,11 +56,13 @@ metadata:
   name: keeper-injector
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.11.0"
 rules:
   - apiGroups: [""]
     resources: [secrets]
-    verbs: [get, list, watch]
+    # create/update/delete are required for K8s-Secret injection mode
+    # (keeper.security/inject-as-k8s-secret); get/list/watch alone make it fail with "forbidden".
+    verbs: [get, list, watch, create, update, patch, delete]
   - apiGroups: [""]
     resources: [pods]
     verbs: [get, list, watch]
@@ -78,7 +80,7 @@ metadata:
   name: keeper-injector
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.11.0"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -96,7 +98,7 @@ metadata:
   namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.11.0"
 spec:
   type: ClusterIP
   ports:
@@ -115,7 +117,7 @@ metadata:
   namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.11.0"
 spec:
   type: ClusterIP
   ports:
@@ -134,7 +136,7 @@ metadata:
   namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.11.0"
 spec:
   replicas: 2
   selector:
@@ -213,7 +215,7 @@ metadata:
   name: keeper-injector
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.11.0"
   annotations:
     cert-manager.io/inject-ca-from: keeper-security/keeper-injector-tls
 webhooks:
@@ -250,7 +252,7 @@ metadata:
   namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.11.0"
 spec:
   selfSigned: {}
 ---
@@ -262,7 +264,7 @@ metadata:
   namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/version: "0.11.0"
 spec:
   secretName: keeper-injector-tls
   duration: 8760h

@@ -55,8 +55,12 @@ func (m *PodMutator) injectEnvironmentVariables(ctx context.Context, pod *corev1
 			continue
 		}
 
-		// Inject into all containers
+		// Inject into the application containers only — skip the injector's own sidecar so
+		// secret values aren't needlessly spread into an extra container's spec.
 		for i := range pod.Spec.Containers {
+			if pod.Spec.Containers[i].Name == "keeper-secrets-sidecar" || pod.Spec.Containers[i].Name == "keeper-secrets-init" {
+				continue
+			}
 			pod.Spec.Containers[i].Env = append(pod.Spec.Containers[i].Env, envVars...)
 		}
 
@@ -86,6 +90,15 @@ func filterEnvVarSecrets(cfg *config.InjectionConfig) []config.SecretRef {
 
 // createKSMClient creates a KSM client using credentials from K8s secret
 func (m *PodMutator) createKSMClient(ctx context.Context, namespace string, cfg *config.InjectionConfig) (*ksm.Client, error) {
+	// Env-var and K8s-Secret injection fetch from Keeper at admission time using the KSM
+	// config stored in a K8s Secret. Cloud auth methods (where the config lives in a cloud
+	// secret store and is fetched by the sidecar at runtime) are not available to this
+	// in-process client — reject with a clear, actionable error.
+	switch cfg.AuthMethod {
+	case "aws-secrets-manager", "gcp-secret-manager", "azure-key-vault":
+		return nil, fmt.Errorf("auth-method %q is not supported with env-var or K8s-Secret injection (these fetch at admission time and require K8s-Secret auth via keeper.security/ksm-config); use file-based injection with cloud auth instead", cfg.AuthMethod)
+	}
+
 	// Fetch auth secret from K8s
 	authSecret := &corev1.Secret{}
 	secretKey := client.ObjectKey{

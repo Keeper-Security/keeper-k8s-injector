@@ -49,7 +49,9 @@ spec:
         # Sidecar configuration
         keeper.security/init-only: "false"             # Enable sidecar mode for automatic rotation
         keeper.security/refresh-interval: "1m"          # Check for updates every minute
-        keeper.security/signal: "SIGHUP"                # Send SIGHUP to main container on refresh
+        keeper.security/signal: "SIGHUP"                # NOT YET IMPLEMENTED (planned): cross-container signaling
+                                                        # is not wired, so no signal is actually delivered to the
+                                                        # app container on refresh. Accepted but currently a no-op.
         keeper.security/fail-on-error: "true"           # Fail if secret fetch fails
 
     spec:

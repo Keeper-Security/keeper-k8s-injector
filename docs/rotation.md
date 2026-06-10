@@ -67,6 +67,12 @@ keeper.security/refresh-interval: "10m"
 
 ## Signal on Update
 
+> **⚠️ Not yet implemented (planned).** The `keeper.security/signal` annotation is accepted and no
+> longer crashes the sidecar, but cross-container signaling is **not wired** — the sidecar does
+> **not** actually deliver a signal to your app container on refresh. Today this is a no-op; do not
+> rely on it for reload-on-rotation. Have your app re-read the secret files instead (see
+> "[Without signal handling](#)" below). The rest of this section describes the planned behavior.
+
 Notify your application when secrets change by sending a signal:
 
 ```yaml
@@ -74,7 +80,7 @@ annotations:
   keeper.security/signal: "SIGHUP"
 ```
 
-**What happens:**
+**What happens (planned — not yet implemented):**
 1. Sidecar detects secret changed
 2. Rewrites files in `/keeper/secrets/`
 3. Sends `SIGHUP` to app container
@@ -283,15 +289,17 @@ keeper.security/refresh-interval: "1h"
 keeper.security/init-only: "true"
 ```
 
-### 2. Implement Signal Handling
+### 2. Implement Signal Handling (planned — not yet implemented)
 
-Don't rely on app to poll for changes - use signals:
+> Signal-on-rotation is **not yet wired** (see "Signal on Update" above). Until it ships, have your
+> app re-read the secret files (e.g. on a timer or via a file watch). The annotation below is
+> accepted but is currently a no-op.
 
 ```yaml
 keeper.security/signal: "SIGHUP"
 ```
 
-**Benefits:**
+**Planned benefits (once implemented):**
 - Instant reload (no polling delay)
 - Lower resource usage
 - Deterministic behavior
@@ -319,8 +327,8 @@ kubectl logs my-pod -c keeper-secrets-sidecar -f | grep "secrets updated"
 Expected output:
 ```
 level=info msg="secrets updated" count=3 duration="142ms"
-level=info msg="sent signal to app" signal="SIGHUP"
 ```
+(No "sent signal to app" line is emitted — signal-on-rotation is not yet implemented.)
 
 ### 5. Set Appropriate Resource Limits
 
@@ -361,16 +369,16 @@ kubectl logs my-pod -c keeper-secrets-sidecar
 
 ### App not reloading
 
-**Verify signal configured:**
+> Note: signal-on-rotation is **not yet implemented** — the sidecar does not currently deliver a
+> signal to the app container, so even with `keeper.security/signal` set your app will not receive
+> one. Until it ships, reload by polling the secret files (below).
+
+**Verify signal configured (for when this ships):**
 ```bash
 kubectl get pod my-pod -o yaml | grep keeper.security/signal
 ```
 
-**Check app handles signal:**
-- Add signal handler to app code
-- Test with `kill -HUP <pid>`
-
-**Alternative**: Poll for file changes in app:
+**Reload today**: Poll for file changes in app:
 ```go
 // Check file modification time
 stat, _ := os.Stat("/keeper/secrets/db.json")
@@ -403,14 +411,15 @@ API calls/hour = (60 minutes / refresh interval) * num pods
 
 | Method | Pod Restart Required | App Code Changes | Latency |
 |--------|---------------------|------------------|---------|
-| **File rotation + signal** | ❌ No | Signal handler | Instant |
+| **File rotation + signal** (planned, not yet implemented) | ❌ No | Signal handler | Instant |
 | **File rotation + polling** | ❌ No | File watch logic | Seconds |
 | **K8s Secret rotation** | ✅ Yes* | None | Minutes |
 | **No rotation (init-only)** | ✅ Yes | None | N/A |
 
 *Unless using Reloader or similar tool
 
-**Recommendation**: Use file-based rotation with signals for zero-downtime updates.
+**Recommendation**: Today, use file-based rotation with app-side polling/file-watching for
+zero-downtime updates. Signal-on-rotation is planned but not yet implemented.
 
 ---
 

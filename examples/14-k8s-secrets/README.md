@@ -89,7 +89,10 @@ kubectl logs my-app -c keeper-secrets-sidecar -f
 kubectl delete -f .
 ```
 
-Secrets with owner references are deleted automatically when pods terminate.
+Note on Secret lifecycle: the Secret is created during admission, **before** the pod has a UID, so
+under the default `k8s-secret-owner-ref: "true"` **no owner reference is actually attached** — the
+Secret is NOT auto-deleted when the pod is deleted. It persists until you delete it explicitly (as
+above) or remove the namespace. Manage its lifecycle yourself.
 
 ## Integration Tests
 

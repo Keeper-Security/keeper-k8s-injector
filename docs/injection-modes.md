@@ -40,9 +40,12 @@ annotations:
 
 ### Multiple Secrets
 
+Use the **plural** `keeper.security/secrets` annotation for a comma-separated list. (The singular
+`keeper.security/secret` is never comma-split — it always names a single record title.)
+
 ```yaml
 annotations:
-  keeper.security/secret: "db-creds, api-keys, tls-cert"
+  keeper.security/secrets: "db-creds, api-keys, tls-cert"
 ```
 
 **Result:**
@@ -172,10 +175,13 @@ annotations:
 ### Limitations
 
 - ❌ Cannot sync changes from Keeper without pod restart
-- ❌ Visible in `kubectl describe pod` output
+- ❌ Visible in `kubectl describe pod` and `kubectl get pod -o yaml` output
 - ❌ Visible in process listings (`ps aux`)
 - ❌ May be captured in logs or debugging output
-- ✅ Secrets never stored in etcd (not K8s Secrets)
+- ❌ **Persisted in etcd**: secret values are written as literal values into the pod spec
+  (`env[].value`), so they live in the pod object and are stored in etcd along with it.
+  For sensitive values, prefer file/tmpfs injection, which keeps the secret in the pod's
+  in-memory volume and out of the pod spec/etcd.
 
 ---
 
@@ -302,12 +308,23 @@ annotations:
 
 ### Owner Reference Control
 
-By default, K8s Secrets are deleted when the pod terminates (via owner reference). To keep Secrets after pod deletion:
+The Secret is created during the pod's mutating-admission webhook — **before** the API server
+assigns the pod a UID. A Pod owner reference with an empty UID would be rejected by the API server,
+so under the default setting (`k8s-secret-owner-ref: "true"`) **no owner reference is stamped** and
+the created Secret therefore has none. As a result, **auto-cleanup-on-pod-delete via owner
+reference is not available** today: the injected Secret persists until you delete the namespace or
+the Secret itself.
 
 ```yaml
-annotations:
-  keeper.security/k8s-secret-owner-ref: "false"
+# Default. Note: no owner reference is actually attached at admission (pod UID not yet assigned),
+# so the Secret is NOT auto-deleted when the pod is deleted.
+keeper.security/k8s-secret-owner-ref: "true"
+
+# Explicitly opt out of owner-reference behavior.
+keeper.security/k8s-secret-owner-ref: "false"
 ```
+
+Because the Secret outlives the pod regardless, manage its lifecycle yourself:
 
 **Use cases:**
 - Secrets shared across multiple pods

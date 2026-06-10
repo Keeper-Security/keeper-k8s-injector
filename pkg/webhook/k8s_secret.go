@@ -23,12 +23,10 @@ const (
 
 // injectK8sSecrets creates K8s Secret objects from Keeper secrets.
 // This is called during pod admission (webhook time) to create/update Secrets.
-func (m *PodMutator) injectK8sSecrets(ctx context.Context, pod *corev1.Pod, cfg *config.InjectionConfig) error {
-	if !cfg.InjectAsK8sSecret {
-		return nil
-	}
-
-	// Filter secrets that should become K8s Secrets
+func (m *PodMutator) injectK8sSecrets(ctx context.Context, pod *corev1.Pod, cfg *config.InjectionConfig, dryRun bool) error {
+	// Gate on the FILTERED set, not the global flag alone: filterK8sSecretConfigs already
+	// ORs the per-secret flag with the global one, so a per-secret injectAsK8sSecret works
+	// even when the global keeper.security/inject-as-k8s-secret is not set.
 	k8sSecrets := filterK8sSecretConfigs(cfg)
 	if len(k8sSecrets) == 0 {
 		m.logger.Debug("no secrets configured for K8s Secret injection")
@@ -78,6 +76,13 @@ func (m *PodMutator) injectK8sSecrets(ctx context.Context, pod *corev1.Pod, cfg 
 		// Validate size
 		if err := validateSecretSize(k8sSecret); err != nil {
 			return fmt.Errorf("K8s Secret %s exceeds size limit: %w", k8sSecret.Name, err)
+		}
+
+		// Dry-run admission: never write to the cluster (webhook declares sideEffects: None).
+		if dryRun {
+			m.logger.Info("dry-run: skipping K8s Secret create/update",
+				zap.String("name", k8sSecret.Name), zap.String("namespace", k8sSecret.Namespace))
+			continue
 		}
 
 		if err := m.createOrUpdateSecret(ctx, k8sSecret, cfg.K8sSecretMode, cfg.K8sSecretOwnerRef); err != nil {
@@ -135,7 +140,12 @@ func (m *PodMutator) batchFetchSecrets(ctx context.Context, ksmClient *ksm.Clien
 			// Individual call for notation
 			notationData, err := ksmClient.GetNotation(ctx, secretRef.Notation)
 			if err != nil {
-				return nil, fmt.Errorf("notation %s failed: %w", secretRef.Notation, err)
+				if cfg.FailOnError {
+					return nil, fmt.Errorf("notation %s failed: %w", secretRef.Notation, err)
+				}
+				m.logger.Warn("notation fetch failed, skipping",
+					zap.String("notation", secretRef.Notation), zap.Error(err))
+				continue
 			}
 			data = &ksm.SecretData{
 				Fields: map[string]interface{}{
@@ -148,7 +158,12 @@ func (m *PodMutator) batchFetchSecrets(ctx context.Context, ksmClient *ksm.Clien
 			// Individual call for file
 			fileData, err := ksmClient.GetFileContent(ctx, secretRef.Name, secretRef.FileName)
 			if err != nil {
-				return nil, fmt.Errorf("file %s fetch failed: %w", secretRef.FileName, err)
+				if cfg.FailOnError {
+					return nil, fmt.Errorf("file %s fetch failed: %w", secretRef.FileName, err)
+				}
+				m.logger.Warn("file fetch failed, skipping",
+					zap.String("name", secretRef.Name), zap.String("fileName", secretRef.FileName), zap.Error(err))
+				continue
 			}
 			data = &ksm.SecretData{
 				Fields: map[string]interface{}{
@@ -192,6 +207,11 @@ func (m *PodMutator) buildK8sSecret(pod *corev1.Pod, secretRef config.SecretRef,
 	namespace := cfg.K8sSecretNamespace
 	if namespace == "" {
 		namespace = pod.Namespace
+	} else if namespace != pod.Namespace {
+		// Fail closed: a pod must not be able to mint a Keeper-backed Secret into another
+		// namespace using the webhook's cluster-wide identity. Cross-namespace writes are a
+		// tenancy/privilege-escalation risk, so reject rather than honor the override.
+		return nil, fmt.Errorf("keeper.security/k8s-secret-namespace %q must equal the pod namespace %q (cross-namespace Secret writes are not permitted)", namespace, pod.Namespace)
 	}
 
 	secretName := secretRef.K8sSecretName
@@ -234,17 +254,27 @@ func (m *PodMutator) buildK8sSecret(pod *corev1.Pod, secretRef config.SecretRef,
 		secretType = corev1.SecretType(cfg.K8sSecretType)
 	}
 
-	// Build owner references
+	// Build owner references. The Secret is created during the pod's mutating-admission
+	// webhook, BEFORE the API server assigns the pod a UID — so pod.UID is empty here and a
+	// Pod OwnerReference with an empty UID would make the API server reject the Secret
+	// ("metadata.ownerReferences.uid: must not be empty"). Only stamp the owner reference
+	// when a UID is actually present (e.g. a future reconcile path); otherwise skip it. The
+	// Secret then persists independently and is cleaned up with the namespace or manually.
 	var ownerRefs []metav1.OwnerReference
 	if cfg.K8sSecretOwnerRef {
-		ownerRefs = []metav1.OwnerReference{
-			{
-				APIVersion: "v1",
-				Kind:       "Pod",
-				Name:       pod.Name,
-				UID:        pod.UID,
-				Controller: boolPtrK8s(true),
-			},
+		if pod.UID != "" {
+			ownerRefs = []metav1.OwnerReference{
+				{
+					APIVersion: "v1",
+					Kind:       "Pod",
+					Name:       pod.Name,
+					UID:        pod.UID,
+					Controller: boolPtrK8s(true),
+				},
+			}
+		} else {
+			m.logger.Debug("skipping K8s Secret owner reference: pod UID not yet assigned at admission time (auto-cleanup via owner reference unavailable)",
+				zap.String("secret", secretName), zap.String("pod", pod.Name))
 		}
 	}
 
@@ -317,6 +347,11 @@ func (m *PodMutator) createOrUpdateSecret(ctx context.Context, secret *corev1.Se
 		// Update owner reference based on setting
 		if ownerRefEnabled && len(secret.OwnerReferences) > 0 {
 			existing.OwnerReferences = secret.OwnerReferences
+		}
+		// Validate the MERGED result (the pre-build size check only saw the new keys; merge
+		// adds them on top of the existing data and could push the total past the limit).
+		if err := validateSecretSize(existing); err != nil {
+			return fmt.Errorf("merged secret %s exceeds size limit: %w", secret.Name, err)
 		}
 		return m.Client.Update(ctx, existing)
 

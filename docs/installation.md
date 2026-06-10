@@ -175,7 +175,7 @@ kubectl port-forward svc/hello-secrets 8080:80
 - Custom paths: `keeper.security/secret-myapp: "/app/config/secrets.json"`
 - Adjust refresh interval: `keeper.security/refresh-interval: "5m"`
 
-See [Annotations Reference](annotations.md) for all options.
+See [Annotation Reference](configuration.md#annotation-reference) for all options.
 
 ## Example: Complete Deployment
 

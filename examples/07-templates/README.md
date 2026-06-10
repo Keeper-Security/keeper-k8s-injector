@@ -196,8 +196,9 @@ kubectl delete -f deployment.yaml
 
 Check sidecar logs:
 ```bash
-kubectl logs deployment/template-demo -c keeper-sidecar
+kubectl logs deployment/template-demo -c keeper-secrets-sidecar
 ```
+(The init container that performs the first render is named `keeper-secrets-init`.)
 
 ### Missing field error
 
@@ -219,4 +220,4 @@ template: |
 ## Next Steps
 
 - [Documentation](../../docs/templates.md) - Complete template guide
-- [Annotations Reference](../../docs/annotations.md) - All configuration options
+- [Annotation Reference](../../docs/configuration.md#annotation-reference) - All configuration options

@@ -37,7 +37,9 @@ metadata:
 rules:
   - apiGroups: [""]
     resources: ["secrets"]
-    verbs: ["get", "list", "watch"]
+    # create/update/delete are required for K8s-Secret injection mode
+    # (keeper.security/inject-as-k8s-secret); get/list/watch alone make it fail with "forbidden".
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["get", "list", "watch"]

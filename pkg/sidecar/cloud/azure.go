@@ -3,10 +3,14 @@ package cloud
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/keyvault/azsecrets"
 )
+
+// azureVaultNameRe matches valid Azure Key Vault names: 3-24 chars, alphanumeric and hyphens.
+var azureVaultNameRe = regexp.MustCompile(`^[A-Za-z0-9-]{3,24}$`)
 
 // FetchKSMConfigFromAzure retrieves Keeper Secrets Manager configuration
 // from Azure Key Vault using Workload Identity.
@@ -28,10 +32,12 @@ func FetchKSMConfigFromAzure(ctx context.Context, vaultName, secretName string) 
 		return "", fmt.Errorf("azure secret name cannot be empty")
 	}
 
-	// Validate vault name format (prevent SSRF)
-	// Vault names must be 3-24 chars, alphanumeric and hyphens only
-	if len(vaultName) < 3 || len(vaultName) > 24 {
-		return "", fmt.Errorf("invalid vault name length: %d (must be 3-24 characters)", len(vaultName))
+	// Validate vault name format (prevent SSRF): Azure vault names must be 3-24 chars and
+	// contain only alphanumerics and hyphens. Enforce the charset too (not just length) —
+	// the value is interpolated into the vault URL below, so a stray character could redirect
+	// the request to an attacker-controlled host.
+	if !azureVaultNameRe.MatchString(vaultName) {
+		return "", fmt.Errorf("invalid vault name %q (must be 3-24 chars, alphanumeric and hyphens only)", vaultName)
 	}
 	// Create Azure credential
 	// Automatically uses Workload Identity from environment variables:

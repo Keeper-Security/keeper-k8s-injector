@@ -14,7 +14,7 @@ Automatically inject secrets from [Keeper Secrets Manager](https://www.keepersec
 - **Automatic sync from Keeper** - Sidecar detects changes in Keeper and updates pods without restarts
 - **Simple configuration** - Just two annotations to get started
 - **Title-based lookup** - Reference secrets by name, not UIDs
-- **Keeper Notation** - Use `keeper://UID/field/password` for precise extraction
+- **Keeper Notation** - Use `keeper://UID/field/password` for precise extraction (via the per-secret `keeper.security/secret-<name>` annotation or a `notation:` field in `keeper.security/config`; the singular `keeper.security/secret` treats its value as a literal record title)
 - **File Attachments** - Download files from Keeper records
 - **Folder Support** - Fetch all secrets from a Keeper folder
 - **Production-ready** - HA, metrics, leader election
@@ -160,9 +160,14 @@ keeper.security/secret-api: "/etc/myapp/api.json"
 
 ### With Rotation
 
+The sidecar refreshes secret files in place on the configured interval. The optional
+`keeper.security/signal` annotation is **not yet implemented (planned)** — it is accepted but
+currently a no-op (no signal is delivered to the app container on refresh), so have your app
+re-read the secret files to pick up changes.
+
 ```yaml
 keeper.security/refresh-interval: "5m"
-keeper.security/signal: "SIGHUP"
+keeper.security/signal: "SIGHUP"   # planned; currently a no-op
 ```
 
 ### Keeper Notation (Specific Fields)
@@ -175,6 +180,12 @@ keeper.security/secret-password: "keeper://QabbPIdM8Unw4hwVM-F8VQ/field/password
 
 ```yaml
 keeper.security/file-cert: "Database Credentials:cert.pem:/app/certs/server.pem"
+```
+
+Keeper notation also works for file attachments:
+
+```yaml
+keeper.security/file-cert: "keeper://Database Credentials/file/cert.pem:/app/certs/server.pem"
 ```
 
 ## Comparison with External Secrets Operator (ESO)

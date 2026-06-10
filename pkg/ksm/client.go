@@ -576,6 +576,24 @@ func (c *Client) GetSecretsInFolder(ctx context.Context, folderUID string) ([]*S
 
 	c.logger.Debug("fetching secrets in folder", zap.String("folderUID", folderUID))
 
+	// Validate the folder UID actually exists. Without this, a typo'd/nonexistent UID simply
+	// matches zero records and returns (empty, nil) — which looks like an empty folder and
+	// silently "succeeds" even under fail-on-error. Fail loudly instead.
+	folders, err := c.sm.GetFolders()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list folders: %w", err)
+	}
+	folderExists := false
+	for _, f := range folders {
+		if f.FolderUid == folderUID {
+			folderExists = true
+			break
+		}
+	}
+	if !folderExists {
+		return nil, fmt.Errorf("folder with UID %q not found", folderUID)
+	}
+
 	// Get all records and filter by folder
 	records, err := c.sm.GetSecrets([]string{})
 	if err != nil {

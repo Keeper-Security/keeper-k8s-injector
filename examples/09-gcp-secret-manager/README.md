@@ -130,4 +130,4 @@ gcloud secrets delete ksm-config --project=$PROJECT_ID
 
 - [AWS Secrets Manager Example](../08-aws-secrets-manager/)
 - [Azure Key Vault Example](../10-azure-key-vault/)
-- [Cloud Secrets Guide](../../docs/cloud-secrets.md)
+- [Cloud Auth Guide](../../docs/cloud-auth.md)

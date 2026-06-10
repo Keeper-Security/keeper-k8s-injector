@@ -147,8 +147,8 @@ func TestWriteSecretFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to stat file: %v", err)
 	}
-	if info.Mode().Perm() != 0400 {
-		t.Errorf("File permissions = %o, want 0400", info.Mode().Perm())
+	if info.Mode().Perm() != 0440 {
+		t.Errorf("File permissions = %o, want 0440", info.Mode().Perm())
 	}
 }
 

@@ -152,9 +152,11 @@ For full automation, combine with [cert-manager](https://cert-manager.io/) to au
 
 ## File Permissions
 
-The sidecar creates certificate files with secure permissions:
-- Certificate: `0644` (readable by all)
-- Private key: `0600` (readable only by owner)
+The sidecar writes every injected file (certificate and private key alike) with mode `0440`
+(owner + group read, no world access), via an atomic temp-file write + rename. There is no
+chmod-to-0600 and no chown to an app user. An app container running as a non-root UID should set a
+matching pod-level `fsGroup` so it can read the files; root and the `nobody` user read them without
+extra configuration.
 
 ## Cleanup
 
@@ -179,7 +181,7 @@ kubectl delete configmap nginx-tls-config
 
 3. Check sidecar logs:
    ```bash
-   kubectl logs deployment/nginx-tls -c keeper-sidecar
+   kubectl logs deployment/nginx-tls -c keeper-secrets-sidecar
    ```
 
 ### "File not found" in Keeper

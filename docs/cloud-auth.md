@@ -27,6 +27,15 @@ Store Keeper Secrets Manager configuration in cloud secrets stores (AWS Secrets 
 - Want simplicity
 - Don't have cloud provider dependencies
 
+> **Pairs with file-based injection only.** Cloud auth-methods
+> (`aws-secrets-manager` / `gcp-secret-manager` / `azure-key-vault`) work when the secrets are
+> injected as **files** (the default mode): the sidecar fetches the KSM config from the cloud
+> provider at runtime, so no `keeper.security/ksm-config` is needed. They are **not** supported
+> with env-var injection (`inject-env-vars`) or K8s-Secret injection (`inject-as-k8s-secret`) —
+> those fetch the secret at admission time and require K8s-Secret/`ksm-config` auth; the webhook
+> now rejects that combination with a clear error. Do **not** also set `keeper.security/ksm-config`
+> when using a cloud auth-method.
+
 ---
 
 ## AWS Secrets Manager (EKS)

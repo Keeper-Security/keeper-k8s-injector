@@ -127,7 +127,9 @@ annotations:
 **Solution**:
 1. Use a unique title or UID
 2. Disable strict mode: `keeper.security/strict-lookup: "false"` (uses first match)
-3. Use folder-scoped titles: `keeper.security/secret: "production/database"`
+3. Disambiguate with a folder path via the per-secret annotation (folder paths are only parsed
+   there, not by the singular `keeper.security/secret`, which treats its value as a literal
+   title): `keeper.security/secret-db: "Production/Databases/database/field/password:/keeper/secrets/db.txt"`
 
 ### Sidecar not refreshing
 

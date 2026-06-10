@@ -93,7 +93,9 @@ Technical overview of how Keeper K8s Injector works internally.
 **Responsibilities**:
 - Continuously refresh secrets at configured interval
 - Rewrite files in `/keeper/secrets/` when secrets change
-- Send signals to app container on update (optional)
+- Send signals to app container on update (**not yet implemented / planned** — cross-container
+  signaling is not wired, so the `keeper.security/signal` annotation is accepted but currently a
+  no-op; no signal is delivered to the app)
 - Update Kubernetes Secrets (if K8s Secret injection enabled)
 
 **Lifecycle**:
@@ -103,7 +105,7 @@ Technical overview of how Keeper K8s Injector works internally.
    - Fetch secrets from Keeper
    - Compare with cached values
    - Update files if changed
-   - Send signal to app (if configured)
+   - Send signal to app (if configured) — *not yet implemented / planned; currently a no-op*
 3. Repeat until pod terminates
 
 **Resource usage**:
@@ -480,9 +482,11 @@ kubectl logs -n keeper-security job/keeper-injector-cert-patch
    ├─ Format output (json, env, properties, etc.)
    └─ Write to file path
 
-6. Set Permissions
-   ├─ chmod 0600 (owner read/write only)
-   └─ chown to app user (if specified)
+6. Write File (atomic)
+   ├─ Write to <path>.tmp with mode 0440 (owner + group read), then rename into place
+   ├─ No chmod-to-0600 and no chown to an app user
+   └─ Non-root app containers read the file via a matching pod-level fsGroup
+      (root and the "nobody" user read it with no extra config)
 ```
 
 ### Refresh Flow (Sidecar)
@@ -500,7 +504,7 @@ kubectl logs -n keeper-security job/keeper-injector-cert-patch
 4. If Changed:
    ├─ Rewrite affected files
    ├─ Log update event
-   └─ Send signal to app (if configured)
+   └─ Send signal to app (if configured) — NOT YET IMPLEMENTED (planned); currently a no-op
 
 5. Repeat from Step 1
 ```

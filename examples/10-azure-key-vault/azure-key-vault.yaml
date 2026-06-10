@@ -55,7 +55,10 @@ spec:
         # Enable Keeper injection
         keeper.security/inject: "true"
 
-        # Use Azure Key Vault for KSM config
+        # Use Azure Key Vault for KSM config.
+        # NOTE: cloud auth-methods pair with FILE-based injection only (the default mode here).
+        # Do NOT also set keeper.security/ksm-config, and do not combine with inject-env-vars or
+        # inject-as-k8s-secret (those fetch at admission time and need K8s-Secret/ksm-config auth).
         keeper.security/auth-method: "azure-key-vault"
 
         # REPLACE: Update with your Azure Key Vault name
