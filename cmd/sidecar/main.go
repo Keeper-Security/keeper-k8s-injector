@@ -63,24 +63,41 @@ type folderEntry struct {
 	OutputPath string `json:"outputPath"`
 }
 
+// Build information, injected at build time via -ldflags (see Makefile / Dockerfiles).
+var (
+	Version   = "dev"
+	GitCommit = "unknown"
+	BuildDate = "unknown"
+)
+
 func main() {
 	var (
 		mode            string
 		refreshInterval time.Duration
 		logLevel        string
 		logFormat       string
+		showVersion     bool
 	)
 
 	flag.StringVar(&mode, "mode", "sidecar", "Operating mode: init or sidecar")
 	flag.DurationVar(&refreshInterval, "refresh-interval", 5*time.Minute, "Secret refresh interval (sidecar mode only)")
 	flag.StringVar(&logLevel, "log-level", "info", "Log level (debug, info, warn, error)")
 	flag.StringVar(&logFormat, "log-format", "json", "Log format (json, console)")
+	flag.BoolVar(&showVersion, "version", false, "Print version information and exit")
 	flag.Parse()
+
+	if showVersion {
+		fmt.Printf("keeper-sidecar %s (commit %s, built %s)\n", Version, GitCommit, BuildDate)
+		os.Exit(0)
+	}
 
 	// Set up logger
 	logger := setupLogger(logLevel, logFormat)
 
 	logger.Info("starting Keeper sidecar agent",
+		zap.String("version", Version),
+		zap.String("gitCommit", GitCommit),
+		zap.String("buildDate", BuildDate),
 		zap.String("mode", mode),
 		zap.Duration("refreshInterval", refreshInterval))
 
