@@ -1,5 +1,7 @@
-# Build stage
-FROM golang:1.25-alpine AS builder
+# Build stage — run the builder natively on the build platform and cross-compile to the
+# target platform, so multi-arch builds don't emulate the target under QEMU (fast) and each
+# image gets its correct native binary.
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
 
 RUN apk add --no-cache git ca-certificates
 
@@ -12,8 +14,10 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the sidecar binary
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+# Build the sidecar binary for the target platform (TARGETOS/TARGETARCH provided by buildx)
+ARG TARGETOS
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} go build \
     -ldflags="-w -s" \
     -o /keeper-sidecar \
     ./cmd/sidecar
