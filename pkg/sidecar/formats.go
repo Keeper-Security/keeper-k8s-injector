@@ -47,7 +47,7 @@ func formatAsProperties(data map[string]interface{}) []byte {
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		buf.WriteString(fmt.Sprintf("%s=%s\n", k, escapePropertiesValue(data[k])))
+		fmt.Fprintf(&buf, "%s=%s\n", k, escapePropertiesValue(data[k]))
 	}
 
 	return buf.Bytes()
@@ -72,7 +72,7 @@ func formatAsINI(data map[string]interface{}) []byte {
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		buf.WriteString(fmt.Sprintf("%s=%s\n", k, escapePropertiesValue(data[k])))
+		fmt.Fprintf(&buf, "%s=%s\n", k, escapePropertiesValue(data[k]))
 	}
 
 	return buf.Bytes()
