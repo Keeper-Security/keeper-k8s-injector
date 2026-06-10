@@ -3,6 +3,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	"github.com/keeper-security/keeper-k8s-injector/pkg/webhook"
@@ -15,6 +16,13 @@ import (
 	ctrlzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+)
+
+// Build information, injected at build time via -ldflags (see Makefile / Dockerfiles).
+var (
+	Version   = "dev"
+	GitCommit = "unknown"
+	BuildDate = "unknown"
 )
 
 var (
@@ -34,6 +42,7 @@ func main() {
 		sidecarImage         string
 		logLevel             string
 		logFormat            string
+		showVersion          bool
 	)
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
@@ -43,13 +52,22 @@ func main() {
 	flag.StringVar(&sidecarImage, "sidecar-image", "keeper/injector-sidecar:latest", "Image for the sidecar container.")
 	flag.StringVar(&logLevel, "log-level", "info", "Log level (debug, info, warn, error).")
 	flag.StringVar(&logFormat, "log-format", "json", "Log format (json, console).")
+	flag.BoolVar(&showVersion, "version", false, "Print version information and exit.")
 	flag.Parse()
+
+	if showVersion {
+		fmt.Printf("keeper-webhook %s (commit %s, built %s)\n", Version, GitCommit, BuildDate)
+		os.Exit(0)
+	}
 
 	// Set up logger
 	logger := setupLogger(logLevel, logFormat)
 	ctrl.SetLogger(ctrlzap.New(ctrlzap.UseDevMode(logFormat == "console")))
 
 	logger.Info("starting Keeper webhook controller",
+		zap.String("version", Version),
+		zap.String("gitCommit", GitCommit),
+		zap.String("buildDate", BuildDate),
 		zap.String("sidecarImage", sidecarImage),
 		zap.String("certDir", certDir))
 

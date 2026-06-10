@@ -14,11 +14,15 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the webhook binary for the target platform (TARGETOS/TARGETARCH provided by buildx)
+# Build the webhook binary for the target platform (TARGETOS/TARGETARCH provided by buildx).
+# VERSION/GIT_COMMIT/BUILD_DATE are injected into the binary so it can report its own version.
 ARG TARGETOS
 ARG TARGETARCH
+ARG VERSION=dev
+ARG GIT_COMMIT=unknown
+ARG BUILD_DATE=unknown
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} go build \
-    -ldflags="-w -s" \
+    -ldflags="-w -s -X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE}" \
     -o /keeper-webhook \
     ./cmd/webhook
 

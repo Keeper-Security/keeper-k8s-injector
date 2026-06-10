@@ -149,9 +149,11 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract version from tag
+      - name: Extract version and build metadata
         id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        run: |
+          echo "VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          echo "DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       # Build and push Docker images
       - name: Build and push webhook image
@@ -164,6 +166,10 @@ jobs:
           tags: |
             keeper/injector-webhook:${{ steps.version.outputs.VERSION }}
             keeper/injector-webhook:latest
+          build-args: |
+            VERSION=${{ steps.version.outputs.VERSION }}
+            GIT_COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ steps.version.outputs.DATE }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -177,6 +183,10 @@ jobs:
           tags: |
             keeper/injector-sidecar:${{ steps.version.outputs.VERSION }}
             keeper/injector-sidecar:latest
+          build-args: |
+            VERSION=${{ steps.version.outputs.VERSION }}
+            GIT_COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ steps.version.outputs.DATE }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
