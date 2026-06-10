@@ -400,8 +400,9 @@ kubectl exec deploy/myapp -- cat /app/config.txt
 
 1. Check sidecar logs:
    ```bash
-   kubectl logs deploy/myapp -c keeper-sidecar
+   kubectl logs deploy/myapp -c keeper-secrets-sidecar
    ```
+   (The init container that performs the first render is named `keeper-secrets-init`.)
 
 2. Verify template syntax is valid
 

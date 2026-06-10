@@ -125,7 +125,7 @@ kubectl delete -f database-mysql.yaml
 1. Verify the password in Keeper matches MySQL:
    ```bash
    # Check what's in Keeper (via sidecar logs)
-   kubectl logs deploy/mysql-client -c keeper-sidecar
+   kubectl logs deploy/mysql-client -c keeper-secrets-sidecar
 
    # Test direct connection
    kubectl exec -it deploy/mysql -- mysql -u demouser -p
@@ -135,7 +135,7 @@ kubectl delete -f database-mysql.yaml
 
 1. Check the sidecar logs:
    ```bash
-   kubectl logs deploy/mysql-client -c keeper-sidecar
+   kubectl logs deploy/mysql-client -c keeper-secrets-sidecar
    ```
 
 2. Verify the record title matches the annotation

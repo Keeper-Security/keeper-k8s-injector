@@ -203,7 +203,7 @@ annotations:
    - Application logs (if not careful)
    - Core dumps and crash reports
 
-3. **Not in etcd**: Unlike using K8s Secrets with `envFrom`, the Keeper Injector fetches secrets at pod creation time and never stores them in etcd.
+3. **Persisted in etcd**: With env-var injection the secret values are written as literal values into the pod spec (`env[].value`). That means they ARE visible in `kubectl get pod -o yaml` / `kubectl describe pod` and are persisted in etcd along with the rest of the pod object. For sensitive values, prefer file-based (tmpfs) injection, which keeps the secret in the pod's in-memory volume and out of the pod spec/etcd.
 
 ## Troubleshooting
 
@@ -257,7 +257,7 @@ kubectl delete namespace keeper-security
 - **Example 01 (Hello Secrets)**: File-based injection with automatic rotation
 - **Example 02 (Database Postgres)**: Real database connection with secrets
 - **Example 06 (Rotation Dashboard)**: Visualize secret rotation in real-time
-- **Documentation**: Read [features.md](../../docs/features.md) for all injection methods
+- **Documentation**: Read [Injection Modes](../../docs/injection-modes.md) for all injection methods
 
 ## Security Best Practices
 
@@ -269,7 +269,7 @@ kubectl delete namespace keeper-security
 
 ## Learn More
 
-- [Annotations Reference](../../docs/annotations.md)
-- [Feature Guide](../../docs/features.md)
-- [Security Model](../../docs/security.md)
+- [Annotation Reference](../../docs/configuration.md#annotation-reference)
+- [Injection Modes](../../docs/injection-modes.md)
+- [Security Comparison](../../docs/injection-modes.md#security-comparison)
 - [Production Guide](../../docs/production.md)

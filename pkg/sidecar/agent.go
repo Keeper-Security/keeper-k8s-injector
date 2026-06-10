@@ -4,12 +4,15 @@ package sidecar
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -49,6 +52,21 @@ type SecretConfig struct {
 	K8sSecretKeys     map[string]string `json:"k8sSecretKeys,omitempty"`     // Keeper field → Secret key mapping
 }
 
+// errSecretDegraded marks a secret that could not be fetched but was tolerated because
+// fail-on-error is false. It is NOT a hard failure, but the secret was not written.
+var errSecretDegraded = errors.New("secret unavailable, continuing in degraded mode")
+
+// cacheKey uniquely identifies a secret entry's cached bytes. Keyed by output path (unique
+// per entry) rather than record Name, so multiple entries referencing the SAME record with
+// different formats/templates/paths don't clobber each other's cache — which would otherwise
+// restore the wrong rendering to a path on the Keeper-unavailable fallback.
+func (c SecretConfig) cacheKey() string {
+	if c.Path != "" {
+		return c.Path
+	}
+	return c.Name
+}
+
 // FolderConfig represents a folder to fetch all secrets from
 type FolderConfig struct {
 	FolderUID  string `json:"folderUid,omitempty"`
@@ -83,8 +101,10 @@ type Agent struct {
 	secretCache *cache.SecretCache
 	mu          sync.RWMutex
 	lastFetch   map[string]time.Time
-	healthy     bool
-	ready       bool
+
+	consecutiveBadCycles int         // guarded by mu (only touched inside fetchAllSecrets)
+	healthy              atomic.Bool // liveness: false after sustained fetch failures
+	ready                atomic.Bool // readiness: true once the initial fetch completes
 }
 
 // NewAgent creates a new secrets agent
@@ -107,15 +127,16 @@ func NewAgent(cfg *AgentConfig) (*Agent, error) {
 		cfg.Logger.Info("K8s Secret rotation enabled", zap.String("namespace", cfg.K8sSecretNamespace))
 	}
 
-	return &Agent{
+	a := &Agent{
 		config:      cfg,
 		k8sClient:   k8sClient,
 		logger:      cfg.Logger,
 		secretCache: cache.NewSecretCache(24 * time.Hour),
 		lastFetch:   make(map[string]time.Time),
-		healthy:     true,
-		ready:       false,
-	}, nil
+	}
+	a.healthy.Store(true)
+	a.ready.Store(false)
+	return a, nil
 }
 
 // Run starts the agent in the configured mode
@@ -150,11 +171,12 @@ func (a *Agent) Run(ctx context.Context) error {
 		}
 		a.logger.Error("initial secret fetch failed, continuing anyway", zap.Error(err))
 	}
-	a.ready = true
+	a.ready.Store(true)
 
-	// If init mode, we're done
+	// If init mode, we're done. (fetchAllSecrets already logged the accurate
+	// written/degraded/failed counts for this cycle.)
 	if a.config.Mode == ModeInit {
-		a.logger.Info("init mode complete, secrets written successfully")
+		a.logger.Info("init mode complete")
 		return nil
 	}
 
@@ -209,22 +231,29 @@ func (a *Agent) fetchAllSecrets(ctx context.Context) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	var errors []error
-	totalSecrets := 0
+	var errs []error
+	written := 0  // secrets/files actually written this cycle
+	degraded := 0 // tolerated failures (fail-on-error=false): nothing written
 
 	// Fetch individual secrets
 	for _, secretCfg := range a.config.Secrets {
 		startTime := time.Now()
-		if err := a.fetchSecret(ctx, secretCfg); err != nil {
+		err := a.fetchSecret(ctx, secretCfg)
+		switch {
+		case err == nil:
+			a.lastFetch[secretCfg.cacheKey()] = time.Now()
+			metrics.RecordSecretFetch(secretCfg.Name, true, time.Since(startTime).Seconds())
+			written++
+		case errors.Is(err, errSecretDegraded):
+			// Already logged in fetchSecret; tolerated, but not written.
+			degraded++
+			metrics.RecordSecretFetch(secretCfg.Name, false, time.Since(startTime).Seconds())
+		default:
 			a.logger.Error("failed to fetch secret",
 				zap.String("name", secretCfg.Name),
 				zap.Error(err))
-			errors = append(errors, err)
+			errs = append(errs, err)
 			metrics.RecordSecretFetch(secretCfg.Name, false, time.Since(startTime).Seconds())
-		} else {
-			a.lastFetch[secretCfg.Name] = time.Now()
-			metrics.RecordSecretFetch(secretCfg.Name, true, time.Since(startTime).Seconds())
-			totalSecrets++
 		}
 	}
 
@@ -234,31 +263,54 @@ func (a *Agent) fetchAllSecrets(ctx context.Context) error {
 		count, err := a.fetchSecretsFromFolder(ctx, folderCfg)
 		if err != nil {
 			a.logger.Error("failed to fetch secrets from folder",
-				zap.String("folder", folderCfg.FolderUID),
+				zap.String("folder", folderLabel(folderCfg)),
 				zap.Error(err))
-			errors = append(errors, err)
-			metrics.RecordSecretFetch("folder:"+folderCfg.FolderUID, false, time.Since(startTime).Seconds())
+			errs = append(errs, err)
+			metrics.RecordSecretFetch("folder:"+folderLabel(folderCfg), false, time.Since(startTime).Seconds())
 		} else {
-			a.lastFetch["folder:"+folderCfg.FolderUID] = time.Now()
-			metrics.RecordSecretFetch("folder:"+folderCfg.FolderUID, true, time.Since(startTime).Seconds())
-			totalSecrets += count
+			a.lastFetch["folder:"+folderLabel(folderCfg)] = time.Now()
+			metrics.RecordSecretFetch("folder:"+folderLabel(folderCfg), true, time.Since(startTime).Seconds())
+			written += count
 		}
 	}
 
 	// Update metrics
-	metrics.SecretsActive.Set(float64(totalSecrets))
-	if len(errors) == 0 {
+	metrics.SecretsActive.Set(float64(written))
+	if len(errs) == 0 && degraded == 0 {
 		metrics.LastRefreshTimestamp.SetToCurrentTime()
 		metrics.RecordRefreshCycle(true)
 	} else {
 		metrics.RecordRefreshCycle(false)
 	}
 
-	if len(errors) > 0 && a.config.FailOnError {
-		return fmt.Errorf("failed to fetch %d secrets", len(errors))
+	// Health: flip unhealthy only after several consecutive imperfect cycles, so a transient
+	// blip doesn't restart the pod but a sustained outage is observable on /healthz.
+	if len(errs) == 0 && degraded == 0 {
+		a.consecutiveBadCycles = 0
+	} else {
+		a.consecutiveBadCycles++
+	}
+	a.healthy.Store(a.consecutiveBadCycles < 3)
+
+	a.logger.Info("secret fetch cycle complete",
+		zap.Int("written", written),
+		zap.Int("degraded", degraded),
+		zap.Int("failed", len(errs)))
+
+	if len(errs) > 0 && a.config.FailOnError {
+		return fmt.Errorf("failed to fetch %d secrets", len(errs))
 	}
 
 	return nil
+}
+
+// folderLabel identifies a folder for logs/metrics by UID, falling back to path when the
+// folder was referenced by path (UID unset) so the label is never empty.
+func folderLabel(cfg FolderConfig) string {
+	if cfg.FolderUID != "" {
+		return cfg.FolderUID
+	}
+	return cfg.FolderPath
 }
 
 // fetchSecret fetches a single secret with retry and caching.
@@ -280,7 +332,9 @@ func (a *Agent) fetchSecret(ctx context.Context, cfg SecretConfig) error {
 		case cfg.Notation != "":
 			data, fetchErr = a.ksmClient.GetNotation(ctx, cfg.Notation)
 			if fetchErr != nil {
-				return fmt.Errorf("notation query failed: %w", fetchErr)
+				// GetNotation already attaches "notation query failed:" context; return as-is
+				// to avoid a doubly-wrapped "notation query failed: notation query failed:".
+				return fetchErr
 			}
 
 		case cfg.IsFile:
@@ -323,31 +377,41 @@ func (a *Agent) fetchSecret(ctx context.Context, cfg SecretConfig) error {
 	})
 
 	if err != nil {
-		// All retries failed - try cache
-		if cached, ok := a.secretCache.Get(cfg.Name); ok {
-			age := a.secretCache.Age(cfg.Name)
-			a.logger.Warn("using cached secret (Keeper API unavailable after retry)",
+		key := cfg.cacheKey()
+		// All retries failed - try cache (keyed per-entry by output path)
+		if cached, ok := a.secretCache.Get(key); ok {
+			age := a.secretCache.Age(key)
+			a.logger.Warn("using cached secret (Keeper unavailable after retry)",
 				zap.String("secret", cfg.Name),
+				zap.String("path", cfg.Path),
 				zap.Duration("cache_age", age),
 				zap.Error(err))
 
 			return a.writeSecretFile(cfg.Path, cached.Data)
 		}
 
-		// No cache available
-		if a.config.FailOnError {
-			return fmt.Errorf("keeper API unavailable and no cached value: %w", err)
+		// Classify: a missing/unmatched record is not the same as Keeper being unreachable.
+		reason := "keeper API unavailable"
+		if strings.Contains(err.Error(), "no record found") || strings.Contains(err.Error(), "no records match") {
+			reason = "secret not found (or no fields matched)"
 		}
 
-		// Graceful degradation
-		a.logger.Error("secret unavailable, no cache, continuing with degraded state",
+		// No cache available
+		if a.config.FailOnError {
+			return fmt.Errorf("%s and no cached value: %w", reason, err)
+		}
+
+		// Graceful degradation: tolerated (fail-on-error=false), but nothing was written.
+		a.logger.Error("secret unavailable, no cache, continuing in degraded mode",
 			zap.String("secret", cfg.Name),
+			zap.String("path", cfg.Path),
+			zap.String("reason", reason),
 			zap.Error(err))
-		return nil
+		return errSecretDegraded
 	}
 
-	// Success - cache the data
-	a.secretCache.Set(cfg.Name, data)
+	// Success - cache the data (keyed per-entry by output path)
+	a.secretCache.Set(cfg.cacheKey(), data)
 
 	// Write to file
 	return a.writeSecretFile(cfg.Path, data)
@@ -445,9 +509,11 @@ func (a *Agent) writeSecretFile(path string, data []byte) error {
 		return fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
 
-	// Write to temp file first, then rename (atomic)
+	// Write to temp file first, then rename (atomic). Mode 0440 (owner+group read) so an
+	// app container running a non-root UID can read the file when the pod sets a matching
+	// fsGroup; still no world access.
 	tmpPath := path + ".tmp"
-	if err := os.WriteFile(tmpPath, data, 0400); err != nil {
+	if err := os.WriteFile(tmpPath, data, 0440); err != nil {
 		return fmt.Errorf("failed to write temp file: %w", err)
 	}
 
@@ -541,10 +607,14 @@ func toEnvKey(key string) string {
 
 // escapeEnvValue escapes a value for use in an env file
 func escapeEnvValue(value string) string {
-	// Simple quoting for values with special characters
-	needsQuotes := false
+	// Quote values containing any character significant to a shell that `source`s the file,
+	// not just whitespace/quotes — otherwise $, #, \, and backticks corrupt or expand the value.
+	needsQuotes := value == ""
 	for _, c := range value {
-		if c == ' ' || c == '\n' || c == '\t' || c == '"' || c == '\'' || c == '=' {
+		if c == ' ' || c == '\n' || c == '\t' || c == '"' || c == '\'' || c == '=' ||
+			c == '$' || c == '#' || c == '\\' || c == '`' || c == '!' || c == '&' ||
+			c == '|' || c == ';' || c == '<' || c == '>' || c == '(' || c == ')' ||
+			c == '*' || c == '?' || c == '~' {
 			needsQuotes = true
 			break
 		}
@@ -699,7 +769,7 @@ func (a *Agent) startHealthServer() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		if a.healthy {
+		if a.healthy.Load() {
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte("ok"))
 		} else {
@@ -709,7 +779,7 @@ func (a *Agent) startHealthServer() {
 	})
 
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
-		if a.ready {
+		if a.ready.Load() {
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte("ok"))
 		} else {

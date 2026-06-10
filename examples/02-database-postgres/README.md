@@ -186,7 +186,7 @@ kubectl delete -f database-postgres.yaml
 1. Verify the password in Keeper matches PostgreSQL:
    ```bash
    # Check what's in Keeper (via sidecar logs)
-   kubectl logs deploy/db-client -c keeper-sidecar
+   kubectl logs deploy/db-client -c keeper-secrets-sidecar
 
    # Test direct connection
    kubectl exec -it deploy/postgres -- psql -U demouser -d demodb
@@ -196,7 +196,7 @@ kubectl delete -f database-postgres.yaml
 
 1. Check the sidecar logs:
    ```bash
-   kubectl logs deploy/db-client -c keeper-sidecar
+   kubectl logs deploy/db-client -c keeper-secrets-sidecar
    ```
 
 2. Verify the record title matches the annotation

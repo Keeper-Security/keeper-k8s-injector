@@ -116,9 +116,11 @@ func (m *PodMutator) Handle(ctx context.Context, req admission.Request) admissio
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("invalid injection configuration: %w", err))
 	}
 
-	// Mutate the pod
+	// Mutate the pod. On a dry-run admission request, side-effecting writes (creating K8s
+	// Secrets) must be suppressed — the webhook declares sideEffects: None.
+	dryRun := req.DryRun != nil && *req.DryRun
 	mutatedPod := pod.DeepCopy()
-	if err := m.mutatePod(ctx, mutatedPod, injectionConfig); err != nil {
+	if err := m.mutatePod(ctx, mutatedPod, injectionConfig, dryRun); err != nil {
 		m.logger.Error("failed to mutate pod", zap.Error(err))
 		metrics.RecordMutation(req.Namespace, false, time.Since(startTime).Seconds(), 0)
 		return admission.Errored(http.StatusInternalServerError, err)
@@ -144,7 +146,7 @@ func (m *PodMutator) Handle(ctx context.Context, req admission.Request) admissio
 }
 
 // mutatePod adds the init container and/or sidecar to the pod
-func (m *PodMutator) mutatePod(ctx context.Context, pod *corev1.Pod, cfg *config.InjectionConfig) error {
+func (m *PodMutator) mutatePod(ctx context.Context, pod *corev1.Pod, cfg *config.InjectionConfig, dryRun bool) error {
 	// Add shared volume for secrets
 	secretsVolume := corev1.Volume{
 		Name: "keeper-secrets",
@@ -227,7 +229,7 @@ func (m *PodMutator) mutatePod(ctx context.Context, pod *corev1.Pod, cfg *config
 	}
 
 	// Create K8s Secrets (if enabled, v0.9.0)
-	if err := m.injectK8sSecrets(ctx, pod, cfg); err != nil {
+	if err := m.injectK8sSecrets(ctx, pod, cfg, dryRun); err != nil {
 		return fmt.Errorf("failed to inject K8s secrets: %w", err)
 	}
 
@@ -238,6 +240,31 @@ func (m *PodMutator) mutatePod(ctx context.Context, pod *corev1.Pod, cfg *config
 	pod.Annotations["keeper.security/injected"] = "true"
 
 	return nil
+}
+
+// buildAgentEnv builds the environment for the init/sidecar containers.
+// KEEPER_AUTH_CONFIG (the K8s Secret holding the KSM config) is injected only for
+// K8s-Secret auth. For cloud auth methods the sidecar fetches the config from the cloud
+// provider itself; injecting a SecretKeyRef with an empty secret name would make the API
+// server reject the pod, so it must be omitted.
+func (m *PodMutator) buildAgentEnv(cfg *config.InjectionConfig, configJSON string) []corev1.EnvVar {
+	env := []corev1.EnvVar{
+		{Name: "KEEPER_CONFIG", Value: configJSON},
+	}
+	if cfg.AuthMethod == "" || cfg.AuthMethod == "secret" {
+		env = append(env, corev1.EnvVar{
+			Name: "KEEPER_AUTH_CONFIG",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: cfg.AuthSecretName,
+					},
+					Key: "config",
+				},
+			},
+		})
+	}
+	return env
 }
 
 // buildInitContainer creates the init container spec
@@ -264,25 +291,9 @@ func (m *PodMutator) buildInitContainer(cfg *config.InjectionConfig, configJSON 
 		Image:           m.config.SidecarImage,
 		ImagePullPolicy: m.config.SidecarImagePullPolicy,
 		Args:            []string{"--mode=init"},
-		Env: []corev1.EnvVar{
-			{
-				Name:  "KEEPER_CONFIG",
-				Value: configJSON,
-			},
-			{
-				Name: "KEEPER_AUTH_CONFIG",
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: cfg.AuthSecretName,
-						},
-						Key: "config",
-					},
-				},
-			},
-		},
-		VolumeMounts: volumeMounts,
-		Resources: m.buildResourceRequirements(),
+		Env:             m.buildAgentEnv(cfg, configJSON),
+		VolumeMounts:    volumeMounts,
+		Resources:       m.buildResourceRequirements(),
 		SecurityContext: &corev1.SecurityContext{
 			RunAsNonRoot:             boolPtr(true),
 			ReadOnlyRootFilesystem:   boolPtr(true),
@@ -296,12 +307,12 @@ func (m *PodMutator) buildInitContainer(cfg *config.InjectionConfig, configJSON 
 
 // buildSidecarContainer creates the sidecar container spec
 func (m *PodMutator) buildSidecarContainer(cfg *config.InjectionConfig, configJSON string) corev1.Container {
+	// NOTE: the refresh signal is propagated to the sidecar via the KEEPER_CONFIG JSON
+	// ("refreshSignal"), NOT as a CLI flag — the sidecar binary does not define a --signal
+	// flag, and passing one would crash it with "flag provided but not defined".
 	args := []string{
 		"--mode=sidecar",
 		fmt.Sprintf("--refresh-interval=%s", cfg.RefreshInterval),
-	}
-	if cfg.Signal != "" {
-		args = append(args, fmt.Sprintf("--signal=%s", cfg.Signal))
 	}
 
 	return corev1.Container{
@@ -309,25 +320,9 @@ func (m *PodMutator) buildSidecarContainer(cfg *config.InjectionConfig, configJS
 		Image:           m.config.SidecarImage,
 		ImagePullPolicy: m.config.SidecarImagePullPolicy,
 		Args:            args,
-		Env: []corev1.EnvVar{
-			{
-				Name:  "KEEPER_CONFIG",
-				Value: configJSON,
-			},
-			{
-				Name: "KEEPER_AUTH_CONFIG",
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: cfg.AuthSecretName,
-						},
-						Key: "config",
-					},
-				},
-			},
-		},
-		VolumeMounts: m.buildVolumeMounts(cfg),
-		Resources: m.buildResourceRequirements(),
+		Env:             m.buildAgentEnv(cfg, configJSON),
+		VolumeMounts:    m.buildVolumeMounts(cfg),
+		Resources:       m.buildResourceRequirements(),
 		SecurityContext: &corev1.SecurityContext{
 			RunAsNonRoot:             boolPtr(true),
 			ReadOnlyRootFilesystem:   boolPtr(true),
@@ -419,6 +414,17 @@ func (m *PodMutator) buildSidecarConfig(cfg *config.InjectionConfig) map[string]
 		if s.IsFile {
 			secret["isFile"] = s.IsFile
 		}
+		// Per-secret K8s-Secret fields must round-trip so the sidecar can refresh the
+		// Secret during rotation (updateK8sSecrets reads these from KEEPER_CONFIG).
+		if s.InjectAsK8sSecret {
+			secret["injectAsK8sSecret"] = true
+		}
+		if s.K8sSecretName != "" {
+			secret["k8sSecretName"] = s.K8sSecretName
+		}
+		if len(s.K8sSecretKeys) > 0 {
+			secret["k8sSecretKeys"] = s.K8sSecretKeys
+		}
 		secrets = append(secrets, secret)
 	}
 
@@ -447,6 +453,14 @@ func (m *PodMutator) buildSidecarConfig(cfg *config.InjectionConfig) map[string]
 
 	if len(folders) > 0 {
 		result["folders"] = folders
+	}
+
+	// K8s-Secret rotation: the sidecar needs these to refresh K8s Secrets on its interval.
+	if cfg.K8sSecretRotation {
+		result["k8sSecretRotation"] = true
+		if cfg.K8sSecretNamespace != "" {
+			result["k8sSecretNamespace"] = cfg.K8sSecretNamespace
+		}
 	}
 
 	// Add cloud provider configuration if present

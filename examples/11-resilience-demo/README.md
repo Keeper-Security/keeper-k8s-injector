@@ -167,5 +167,5 @@ kubectl delete secret keeper-credentials
 
 ## See Also
 
-- [Features Guide](../../docs/features.md) - Complete feature reference
-- [Cloud Secrets](../../docs/cloud-secrets.md) - AWS/GCP/Azure authentication
+- [Configuration Guide](../../docs/configuration.md) - Complete feature reference
+- [Cloud Auth](../../docs/cloud-auth.md) - AWS/GCP/Azure authentication

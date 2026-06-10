@@ -37,7 +37,6 @@ Production deployment and enterprise features:
 ## 📚 Reference
 
 - **[Migration Guide](migration.md)** - Coming from External Secrets Operator or Vault
-- **[Comparison](comparison.md)** - vs ESO, Vault, 1Password, AWS CSI
 
 ## 💬 Need Help?
 

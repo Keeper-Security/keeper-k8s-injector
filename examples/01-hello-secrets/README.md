@@ -164,7 +164,7 @@ kubectl delete -f hello-secrets.yaml
 
 1. Check the sidecar logs:
    ```bash
-   kubectl logs deployment/hello-secrets -c keeper-sidecar
+   kubectl logs deployment/hello-secrets -c keeper-secrets-sidecar
    ```
 
 2. Verify your auth secret exists:

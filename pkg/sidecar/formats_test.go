@@ -5,6 +5,24 @@ import (
 	"testing"
 )
 
+// TestFormatAsPropertiesEscapesNewlines guards against a multi-line field value injecting a
+// spurious extra property line (which would break java.util.Properties parsing).
+func TestFormatAsPropertiesEscapesNewlines(t *testing.T) {
+	data := map[string]interface{}{
+		"password": "ok\nadmin.enabled=true",
+	}
+	output := string(formatAsProperties(data))
+	if strings.Contains(output, "\nadmin.enabled=true") {
+		t.Errorf("newline not escaped — value injected a spurious property line: %q", output)
+	}
+	if !strings.Contains(output, `password=ok\nadmin.enabled=true`) {
+		t.Errorf("expected escaped newline in value, got: %q", output)
+	}
+	if got := strings.Count(strings.TrimSpace(output), "\n"); got != 0 {
+		t.Errorf("expected a single line, got %d newlines: %q", got, output)
+	}
+}
+
 func TestFormatAsProperties(t *testing.T) {
 	data := map[string]interface{}{
 		"username": "admin",

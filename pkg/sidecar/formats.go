@@ -4,9 +4,35 @@ import (
 	"bytes"
 	"fmt"
 	"sort"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
+
+// scalarToString renders a field value as a single-line string, matching formatAsEnv's
+// handling of string/[]byte and JSON-encoding anything else.
+func scalarToString(v interface{}) string {
+	switch val := v.(type) {
+	case string:
+		return val
+	case []byte:
+		return string(val)
+	default:
+		return fmt.Sprintf("%v", val)
+	}
+}
+
+// escapePropertiesValue makes a value safe for a single .properties / .ini line: a raw
+// newline in a Keeper field value would otherwise start a spurious key (or, in INI, a
+// fake [section]) and break java.util.Properties / INI parsers. Escape the line-significant
+// characters per the .properties convention.
+func escapePropertiesValue(v interface{}) string {
+	s := scalarToString(v)
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "\n", "\\n")
+	s = strings.ReplaceAll(s, "\r", "\\r")
+	return s
+}
 
 // formatAsProperties converts secret data to Java .properties format.
 // Keys are sorted alphabetically for consistent output.
@@ -21,8 +47,7 @@ func formatAsProperties(data map[string]interface{}) []byte {
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		v := data[k]
-		buf.WriteString(fmt.Sprintf("%s=%v\n", k, v))
+		buf.WriteString(fmt.Sprintf("%s=%s\n", k, escapePropertiesValue(data[k])))
 	}
 
 	return buf.Bytes()
@@ -47,8 +72,7 @@ func formatAsINI(data map[string]interface{}) []byte {
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		v := data[k]
-		buf.WriteString(fmt.Sprintf("%s=%v\n", k, v))
+		buf.WriteString(fmt.Sprintf("%s=%s\n", k, escapePropertiesValue(data[k])))
 	}
 
 	return buf.Bytes()

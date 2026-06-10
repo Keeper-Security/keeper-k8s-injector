@@ -196,7 +196,7 @@ Templates support 100+ functions from [Sprig](http://masterminds.github.io/sprig
 | `keeper.security/refresh-interval` | `"5m"` | How often to refresh secrets |
 | `keeper.security/init-only` | `"false"` | Only use init container (no sidecar) |
 | `keeper.security/fail-on-error` | `"true"` | Fail pod startup if secrets can't be fetched |
-| `keeper.security/signal` | `""` | Signal to send on refresh (e.g., `"SIGHUP"`) |
+| `keeper.security/signal` | `""` | Signal to send to the app on refresh (e.g., `"SIGHUP"`). **Not yet implemented / planned** — accepted but currently a no-op; no signal is actually delivered to the app container. |
 | `keeper.security/strict-lookup` | `"false"` | Fail if multiple records match title |
 
 ### Environment Variable Injection Annotations
@@ -279,11 +279,13 @@ annotations:
 - Compliance requirements (SOC2, PCI-DSS)
 
 **Environment variable limitations**:
-- ❌ Visible in `kubectl describe pod` output
+- ❌ Visible in `kubectl describe pod` and `kubectl get pod -o yaml` output
 - ❌ Visible in process listings inside containers
 - ❌ May be captured in logs or debugging output
 - ❌ Cannot be rotated without pod restart
-- ✅ Secrets never stored in etcd (not K8s Secrets)
+- ❌ **Persisted in etcd**: values are injected as literal values into the pod spec (`env[].value`),
+  so they are stored in etcd along with the pod object. For sensitive values, prefer file/tmpfs
+  injection (which keeps the secret out of the pod spec and etcd).
 
 **File-based advantages**:
 - ✅ Not visible in pod metadata
@@ -596,6 +598,13 @@ annotations:
 Result:
 - `/app/certs/server.pem` contains the `cert.pem` file from "Database Credentials" record
 - `/app/certs/server.key` contains the `key.pem` file from "Database Credentials" record
+
+Keeper notation is also accepted for `file-<name>` attachments as an alternative to the
+`RECORD:FILENAME:PATH` form:
+
+```yaml
+keeper.security/file-cert: "keeper://Database Credentials/file/cert.pem:/app/certs/server.pem"
+```
 
 ### Folder Support
 

@@ -15,13 +15,19 @@ Demonstrates how to reference Keeper secrets using folder paths instead of UIDs,
 
 **Before (UID-based):**
 ```yaml
-keeper.security/secret: "QabbP Id M8Unw4hwVM-F8VQ"  # What is this?
+keeper.security/secret-db: "keeper://QabbP Id M8Unw4hwVM-F8VQ/field/password"  # What is this?
 ```
 
 **After (folder path):**
 ```yaml
-keeper.security/secret: "Production/Databases/mysql-prod"  # Clear!
+keeper.security/secret-db: "Production/Databases/mysql-prod/field/password"  # Clear!
 ```
+
+> Folder-path and `keeper://` notation are parsed only by the **per-secret**
+> `keeper.security/secret-<name>` annotation (the record name comes from the `<name>` suffix)
+> or by the `notation:` field inside a `keeper.security/config` block. The singular
+> `keeper.security/secret` annotation treats its whole value as a literal record **title** and
+> does NOT parse notation.
 
 **Benefits:**
 - **Readable**: Know what secret you're referencing at a glance
@@ -170,38 +176,43 @@ The password should update automatically!
 
 ## Folder Path Notation Formats
 
+> Notation (folder paths, `keeper://`, selectors) is only parsed by the per-secret
+> `keeper.security/secret-<name>` annotation or by the `notation:` field in a
+> `keeper.security/config` block — never by the singular `keeper.security/secret` annotation,
+> which treats its value as a literal record title.
+
 ### With keeper:// prefix
 
 ```yaml
-keeper.security/secret: "keeper://Production/Databases/mysql-prod/field/password:/app/secrets/db-pass"
+keeper.security/secret-db-pass: "keeper://Production/Databases/mysql-prod/field/password:/app/secrets/db-pass"
 ```
 
 ### Without prefix (also works)
 
 ```yaml
-keeper.security/secret: "Production/Databases/mysql-prod/field/password:/app/secrets/db-pass"
+keeper.security/secret-db-pass: "Production/Databases/mysql-prod/field/password:/app/secrets/db-pass"
 ```
 
 ### Supported Selectors
 
 ```yaml
 # Extract field
-"Production/Databases/mysql-prod/field/password:/app/secrets/pass.txt"
+keeper.security/secret-pass: "Production/Databases/mysql-prod/field/password:/app/secrets/pass.txt"
 
 # Extract custom field
-"Production/APIs/stripe/custom_field/api_token:/app/secrets/token.txt"
+keeper.security/secret-token: "Production/APIs/stripe/custom_field/api_token:/app/secrets/token.txt"
 
 # Download file attachment
-"Production/Certs/ssl-cert/file/cert.pem:/app/certs/cert.pem"
+keeper.security/secret-cert: "Production/Certs/ssl-cert/file/cert.pem:/app/certs/cert.pem"
 
 # Get record type
-"Production/Databases/mysql-prod/type:/app/metadata/type.txt"
+keeper.security/secret-type: "Production/Databases/mysql-prod/type:/app/metadata/type.txt"
 
 # Get record title
-"Production/Databases/mysql-prod/title:/app/metadata/title.txt"
+keeper.security/secret-title: "Production/Databases/mysql-prod/title:/app/metadata/title.txt"
 
 # Get entire record (no selector)
-"Production/Databases/mysql-prod:/app/secrets/full-record.json"
+keeper.security/secret-full: "Production/Databases/mysql-prod:/app/secrets/full-record.json"
 ```
 
 ## Folder vs. UID: When to Use Each
@@ -250,11 +261,11 @@ kubectl delete secret keeper-credentials
 ## Next Steps
 
 - Try [Example 12: Environment Variables](../12-env-vars/) to inject folder path secrets as env vars
-- See [docs/annotations.md](../../docs/annotations.md#folder-path-notation) for complete notation reference
-- Learn about [folder-based organization](../../docs/features.md#folder-support) in the features guide
+- See [docs/configuration.md](../../docs/configuration.md#folder-path-notation) for complete notation reference
+- Learn about [folder support](../../docs/configuration.md#folder-support) in the configuration guide
 
 ## Related Documentation
 
-- [Annotations Reference](../../docs/annotations.md)
-- [Features Guide](../../docs/features.md)
+- [Annotation Reference](../../docs/configuration.md#annotation-reference)
+- [Keeper Notation](../../docs/configuration.md#keeper-notation)
 - [Troubleshooting](../../docs/troubleshooting.md)

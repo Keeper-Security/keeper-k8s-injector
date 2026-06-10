@@ -35,16 +35,26 @@ type secretsConfig struct {
 	GCPSecretID     string `json:"gcpSecretId,omitempty"`
 	AzureVaultName  string `json:"azureVaultName,omitempty"`
 	AzureSecretName string `json:"azureSecretName,omitempty"`
+
+	// K8s Secret rotation (round-tripped from the webhook so the sidecar can refresh K8s Secrets)
+	K8sSecretRotation  bool   `json:"k8sSecretRotation,omitempty"`
+	K8sSecretNamespace string `json:"k8sSecretNamespace,omitempty"`
 }
 
 type secretEntry struct {
 	Name     string   `json:"name"`
 	Path     string   `json:"path"`
 	Format   string   `json:"format"`
+	Template string   `json:"template,omitempty"`
 	Fields   []string `json:"fields,omitempty"`
 	Notation string   `json:"notation,omitempty"`
 	FileName string   `json:"fileName,omitempty"`
 	IsFile   bool     `json:"isFile,omitempty"`
+
+	// K8s Secret injection (must round-trip so sidecar rotation can update the Secret)
+	InjectAsK8sSecret bool              `json:"injectAsK8sSecret,omitempty"`
+	K8sSecretName     string            `json:"k8sSecretName,omitempty"`
+	K8sSecretKeys     map[string]string `json:"k8sSecretKeys,omitempty"`
 }
 
 type folderEntry struct {
@@ -154,13 +164,17 @@ func main() {
 	secrets := make([]sidecar.SecretConfig, len(cfg.Secrets))
 	for i, s := range cfg.Secrets {
 		secrets[i] = sidecar.SecretConfig{
-			Name:     s.Name,
-			Path:     s.Path,
-			Format:   s.Format,
-			Fields:   s.Fields,
-			Notation: s.Notation,
-			FileName: s.FileName,
-			IsFile:   s.IsFile,
+			Name:              s.Name,
+			Path:              s.Path,
+			Format:            s.Format,
+			Template:          s.Template,
+			Fields:            s.Fields,
+			Notation:          s.Notation,
+			FileName:          s.FileName,
+			IsFile:            s.IsFile,
+			InjectAsK8sSecret: s.InjectAsK8sSecret,
+			K8sSecretName:     s.K8sSecretName,
+			K8sSecretKeys:     s.K8sSecretKeys,
 		}
 	}
 
@@ -190,6 +204,9 @@ func main() {
 		KSMConfig:       ksmConfig,
 		AuthMethod:      cfg.AuthMethod,
 		Logger:          logger,
+
+		K8sSecretRotation:  cfg.K8sSecretRotation,
+		K8sSecretNamespace: cfg.K8sSecretNamespace,
 	}
 
 	// Create and run agent

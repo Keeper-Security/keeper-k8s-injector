@@ -242,4 +242,4 @@ aws secretsmanager delete-secret --secret-id prod/keeper/ksm-config --force-dele
 
 - [GCP Secret Manager Example](../09-gcp-secret-manager/) - GCP equivalent
 - [Azure Key Vault Example](../10-azure-key-vault/) - Azure equivalent
-- [Cloud Secrets Guide](../../docs/cloud-secrets.md) - Complete documentation
+- [Cloud Auth Guide](../../docs/cloud-auth.md) - Complete documentation

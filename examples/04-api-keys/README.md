@@ -163,7 +163,7 @@ kubectl delete -f deployment.yaml
 
 1. Check the sidecar logs:
    ```bash
-   kubectl logs deployment/api-keys-demo -c keeper-sidecar
+   kubectl logs deployment/api-keys-demo -c keeper-secrets-sidecar
    ```
 
 2. Verify the record title in Keeper matches the annotation exactly

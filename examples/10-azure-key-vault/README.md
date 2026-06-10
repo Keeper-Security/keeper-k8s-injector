@@ -168,4 +168,4 @@ az keyvault secret delete \
 
 - [AWS Secrets Manager Example](../08-aws-secrets-manager/)
 - [GCP Secret Manager Example](../09-gcp-secret-manager/)
-- [Cloud Secrets Guide](../../docs/cloud-secrets.md)
+- [Cloud Auth Guide](../../docs/cloud-auth.md)

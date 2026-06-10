@@ -246,8 +246,10 @@ func TestBuildK8sSecret_OwnerRefDisabled(t *testing.T) {
 	assert.Len(t, secret.OwnerReferences, 0)
 }
 
-// TestBuildK8sSecret_CustomNamespace tests custom namespace
-func TestBuildK8sSecret_CustomNamespace(t *testing.T) {
+// TestBuildK8sSecret_Namespace verifies the Secret is created in the pod's namespace, that
+// an explicit namespace equal to the pod's is honored, and that a cross-namespace value is
+// rejected (a pod must not mint a Secret into another namespace via the webhook identity).
+func TestBuildK8sSecret_Namespace(t *testing.T) {
 	mutator := &PodMutator{
 		logger: zap.NewNop(),
 	}
@@ -271,15 +273,21 @@ func TestBuildK8sSecret_CustomNamespace(t *testing.T) {
 		},
 	}
 
-	cfg := &config.InjectionConfig{
-		K8sSecretNamespace: "production", // Custom namespace
+	// Explicit namespace equal to the pod namespace is allowed.
+	secret, err := mutator.buildK8sSecret(pod, secretRef, data, &config.InjectionConfig{
+		K8sSecretNamespace: "default",
 		K8sSecretOwnerRef:  true,
-	}
-
-	secret, err := mutator.buildK8sSecret(pod, secretRef, data, cfg)
+	})
 	require.NoError(t, err)
+	assert.Equal(t, "default", secret.Namespace)
 
-	assert.Equal(t, "production", secret.Namespace)
+	// Cross-namespace override is rejected.
+	_, err = mutator.buildK8sSecret(pod, secretRef, data, &config.InjectionConfig{
+		K8sSecretNamespace: "production",
+		K8sSecretOwnerRef:  true,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cross-namespace")
 }
 
 // TestCreateOrUpdateSecret_Create tests creating a new Secret
