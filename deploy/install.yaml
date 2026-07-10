@@ -18,7 +18,7 @@ metadata:
   namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.11.1"
+    app.kubernetes.io/version: "0.11.2"
 spec:
   minAvailable: 1
   selector:
@@ -33,7 +33,7 @@ metadata:
   namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.11.1"
+    app.kubernetes.io/version: "0.11.2"
 ---
 # Source: keeper-injector/templates/configmap.yaml
 apiVersion: v1
@@ -43,7 +43,7 @@ metadata:
   namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.11.1"
+    app.kubernetes.io/version: "0.11.2"
 data:
   excluded-namespaces: "kube-system,kube-public,kube-node-lease,cert-manager"
   default-refresh-interval: "5m"
@@ -56,7 +56,7 @@ metadata:
   name: keeper-injector
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.11.1"
+    app.kubernetes.io/version: "0.11.2"
 rules:
   - apiGroups: [""]
     resources: [secrets]
@@ -80,7 +80,7 @@ metadata:
   name: keeper-injector
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.11.1"
+    app.kubernetes.io/version: "0.11.2"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -98,7 +98,7 @@ metadata:
   namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.11.1"
+    app.kubernetes.io/version: "0.11.2"
 spec:
   type: ClusterIP
   ports:
@@ -117,7 +117,7 @@ metadata:
   namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.11.1"
+    app.kubernetes.io/version: "0.11.2"
 spec:
   type: ClusterIP
   ports:
@@ -136,7 +136,7 @@ metadata:
   namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.11.1"
+    app.kubernetes.io/version: "0.11.2"
 spec:
   replicas: 2
   selector:
@@ -161,12 +161,12 @@ spec:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             runAsUser: 65534
-          image: keeper/injector-webhook:0.1.0
+          image: keeper/injector-webhook:0.11.2
           imagePullPolicy: IfNotPresent
           args:
             - --cert-dir=/etc/webhook/certs
             - --health-probe-bind-address=:8081
-            - --sidecar-image=keeper/injector-sidecar:0.1.0
+            - --sidecar-image=keeper/injector-sidecar:0.11.2
             - --log-level=info
             - --log-format=json
             - --leader-elect=true
@@ -215,7 +215,7 @@ metadata:
   name: keeper-injector
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.11.1"
+    app.kubernetes.io/version: "0.11.2"
   annotations:
     cert-manager.io/inject-ca-from: keeper-security/keeper-injector-tls
 webhooks:
@@ -252,7 +252,7 @@ metadata:
   namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.11.1"
+    app.kubernetes.io/version: "0.11.2"
 spec:
   selfSigned: {}
 ---
@@ -264,7 +264,7 @@ metadata:
   namespace: keeper-security
   labels:
     app.kubernetes.io/name: keeper-injector
-    app.kubernetes.io/version: "0.11.1"
+    app.kubernetes.io/version: "0.11.2"
 spec:
   secretName: keeper-injector-tls
   duration: 8760h
