@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.3] - 2026-08-26
+
+### Security
+
+- Reject a pod whose declared namespace disagrees with the admission request's namespace,
+  closing a cross-namespace Secret read/write and an ExcludedNamespaces bypass
+- Stop returning the real mutation error to the webhook caller, closing a cross-namespace
+  Secret-existence oracle
+- Return an error instead of panicking when a KSM config fails to initialize
+- Update `google.golang.org/grpc` to 1.82.1 (GHSA-hrxh-6v49-42gf)
+
+### Fixed
+
+- Exclude the injector's own namespace from the webhook's namespaceSelector so a fresh
+  install can't deadlock on itself
+- Pin `deploy/install.yaml` webhook and sidecar images to the release version instead of `0.11.2`
+
+### Changed
+
+- Replace the `0.0.0.0/0` webhook-admission NetworkPolicy example in docs/production.md
+  with guidance on finding a real provider CIDR
+
 ## [0.11.2] - 2026-07-10
 
 ### Security
