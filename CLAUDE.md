@@ -39,7 +39,7 @@ This is the Keeper Kubernetes Secrets Injector - a mutating admission webhook th
 
 3. **Run linter:**
    ```bash
-   docker run --rm -v $(pwd):/app -w /app golangci/golangci-lint:v1.65.2 golangci-lint run --timeout=5m
+   docker run --rm -v $(pwd):/app -w /app golangci/golangci-lint:v2.13.1 golangci-lint run --timeout=5m
    ```
 
 4. **Only after all pass:** git push
