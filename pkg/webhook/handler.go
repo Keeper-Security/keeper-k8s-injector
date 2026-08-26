@@ -18,6 +18,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
+// errPodMutationFailed is returned to the admission caller in place of the real mutatePod
+// error, which can otherwise disclose whether a Secret exists in another namespace.
+var errPodMutationFailed = fmt.Errorf("failed to inject secrets into pod")
+
 // PodMutator handles pod mutation for secret injection
 type PodMutator struct {
 	Client  client.Client
@@ -134,9 +138,12 @@ func (m *PodMutator) Handle(ctx context.Context, req admission.Request) admissio
 	dryRun := req.DryRun != nil && *req.DryRun
 	mutatedPod := pod.DeepCopy()
 	if err := m.mutatePod(ctx, mutatedPod, injectionConfig, dryRun); err != nil {
+		// Log the real error server-side only. mutatePod's error can embed detail about a
+		// Secret in another namespace (whether it exists, whether it holds a KSM config) —
+		// returning it to the caller would turn a failed mutation into an information leak.
 		m.logger.Error("failed to mutate pod", zap.Error(err))
 		metrics.RecordMutation(req.Namespace, false, time.Since(startTime).Seconds(), 0)
-		return admission.Errored(http.StatusInternalServerError, err)
+		return admission.Errored(http.StatusInternalServerError, errPodMutationFailed)
 	}
 
 	// Create patch
