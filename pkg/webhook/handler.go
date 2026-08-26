@@ -94,6 +94,19 @@ func (m *PodMutator) Handle(ctx context.Context, req admission.Request) admissio
 		zap.String("namespace", pod.Namespace),
 		zap.String("generateName", pod.GenerateName))
 
+	// req.Namespace comes from the admission envelope, which the API server populates and a
+	// caller cannot forge. pod.Namespace comes from the request body. The two must agree:
+	// every downstream Secret lookup and write keys off pod.Namespace, so a mismatch would let
+	// a request name one namespace in the envelope while acting on another.
+	if pod.Namespace != "" && pod.Namespace != req.Namespace {
+		m.logger.Error("rejecting pod mutation: namespace mismatch between admission request and pod object",
+			zap.String("requestNamespace", req.Namespace),
+			zap.String("podNamespace", pod.Namespace))
+		metrics.RecordMutation(req.Namespace, false, time.Since(startTime).Seconds(), 0)
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("pod namespace %q does not match request namespace %q", pod.Namespace, req.Namespace))
+	}
+	pod.Namespace = req.Namespace
+
 	// Check if namespace is excluded
 	for _, ns := range m.config.ExcludedNamespaces {
 		if req.Namespace == ns {
