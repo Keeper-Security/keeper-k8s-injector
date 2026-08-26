@@ -243,6 +243,14 @@ webhooks:
         - key: keeper.security/inject
           operator: NotIn
           values: [disabled]
+        # Exclude the injector's own namespace. Without this, a fresh install intercepts
+        # creation of its own pods before the webhook is serving, so the Service has no
+        # endpoints, the call fails, and failurePolicy: Fail rejects it — the Deployment
+        # can never produce a pod. The same shape means a total loss of injector pods
+        # would be unrecoverable without deleting this webhook config by hand.
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values: [keeper-security]
 ---
 # Source: keeper-injector/templates/certificate.yaml
 apiVersion: cert-manager.io/v1
