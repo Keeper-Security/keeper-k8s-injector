@@ -396,16 +396,28 @@ spec:
   policyTypes:
     - Ingress
   ingress:
-    # Allow API server
+    # Replace with your control plane's actual source CIDR (see below).
     - from:
         - ipBlock:
-            cidr: 0.0.0.0/0  # API server IP varies
+            cidr: <API_SERVER_CIDR>
       ports:
         - protocol: TCP
           port: 443
 ```
 
-**Note**: API server source IP varies by provider (EKS, GKE, AKS). Use `0.0.0.0/0` or get specific IP range from provider docs.
+**Do not use `0.0.0.0/0` for the `cidr` above.** Standard `NetworkPolicy` has no way to select
+"the API server" directly — the control plane usually isn't a pod on the cluster network — so
+this has to be a real CIDR. `0.0.0.0/0` matches every pod in the cluster, which is the exact
+access this policy exists to prevent; it provides no restriction at all and is no better than
+having no `NetworkPolicy` object here.
+
+Look up the real range for your provider (EKS, GKE, AKS, or your own control plane's node/VPC
+CIDR) rather than guessing. If your CNI supports it, an identity-based rule is more reliable
+than a CIDR: Cilium, for example, can match the control plane directly with a
+`CiliumNetworkPolicy` using `fromEntities: [kube-apiserver]`, which doesn't require knowing an IP
+range up front. If you can't determine a scoped CIDR at all, omit this `NetworkPolicy` rather than publish
+`0.0.0.0/0` — an absent policy is no worse, and a rule that looks restrictive but isn't is worse
+than no rule.
 
 ---
 
