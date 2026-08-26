@@ -100,6 +100,13 @@ func NewClient(ctx context.Context, cfg Config) (*Client, error) {
 		}
 
 		sm := ksm.NewSecretsManager(options)
+		// The SDK's constructor has no error return; it reports an unparseable or
+		// otherwise invalid config by returning a nil *SecretsManager and logging through
+		// its own logger, which we don't see. Every method on the returned Client would
+		// then panic on first use, so surface it as an error here instead.
+		if sm == nil {
+			return nil, fmt.Errorf("failed to initialize KSM client: invalid configuration")
+		}
 
 		return &Client{
 			sm:          sm,
