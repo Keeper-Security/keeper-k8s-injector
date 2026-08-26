@@ -116,3 +116,32 @@ func buildAdmissionRequest(t *testing.T, reqNamespace string, pod *corev1.Pod) a
 		Object:    runtime.RawExtension{Raw: raw},
 	}}
 }
+
+// TestHandle_MutationFailureReturnsGenericError is the regression test for the
+// error-sanitization fix: a failed mutation (e.g. the auth Secret doesn't exist, or exists
+// but holds no KSM config) must not leak that detail to the caller. The caller sees a fixed
+// message regardless of which of those was the real cause.
+func TestHandle_MutationFailureReturnsGenericError(t *testing.T) {
+	m := newTestMutator(t)
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "app",
+			Namespace: "team-a",
+			Annotations: map[string]string{
+				"keeper.security/inject":          "true",
+				"keeper.security/ksm-config":      "no-such-secret",
+				"keeper.security/inject-env-vars": "true",
+				"keeper.security/secret":          "demo",
+			},
+		},
+		Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app", Image: "busybox"}}},
+	}
+	req := buildAdmissionRequest(t, "team-a", pod)
+
+	resp := m.Handle(context.Background(), req)
+
+	assert.False(t, resp.Allowed)
+	require.NotNil(t, resp.Result)
+	assert.Equal(t, errPodMutationFailed.Error(), resp.Result.Message)
+	assert.NotContains(t, resp.Result.Message, "no-such-secret")
+}
