@@ -75,6 +75,9 @@ type FolderConfig struct {
 }
 
 // AgentConfig holds the agent configuration
+// DefaultHealthPort is the sidecar health/metrics port when none is configured.
+const DefaultHealthPort = 8080
+
 type AgentConfig struct {
 	Mode            Mode
 	Secrets         []SecretConfig
@@ -85,6 +88,7 @@ type AgentConfig struct {
 	RefreshSignal   string
 	KSMConfig       string // Base64-encoded KSM config (for secret auth)
 	AuthMethod      string // Auth method: "secret" (default) or "oidc"
+	HealthPort      int    // Health/metrics server port (0 = 8080)
 	Logger          *zap.Logger
 
 	// K8s Secret rotation (v0.9.0)
@@ -791,12 +795,18 @@ func (a *Agent) startHealthServer() {
 	// Prometheus metrics endpoint
 	mux.Handle("/metrics", promhttp.Handler())
 
+	port := a.config.HealthPort
+	if port == 0 {
+		port = DefaultHealthPort
+	}
+	addr := fmt.Sprintf(":%d", port)
 	server := &http.Server{
-		Addr:    ":8080",
-		Handler: mux,
+		Addr:              addr,
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	a.logger.Info("starting health server", zap.String("addr", ":8080"))
+	a.logger.Info("starting health server", zap.String("addr", addr))
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		a.logger.Error("health server error", zap.Error(err))
 	}

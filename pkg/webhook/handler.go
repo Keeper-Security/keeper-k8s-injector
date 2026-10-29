@@ -239,6 +239,11 @@ func (m *PodMutator) mutatePod(ctx context.Context, pod *corev1.Pod, cfg *config
 
 	// Create sidecar container (for rotation, unless init-only)
 	if !cfg.InitOnly {
+		port, err := healthPortFor(pod, cfg.HealthPort)
+		if err != nil {
+			return err
+		}
+		cfg.HealthPort = port
 		sidecarContainer := m.buildSidecarContainer(cfg, string(sidecarConfigJSON))
 		pod.Spec.Containers = append(pod.Spec.Containers, sidecarContainer)
 	}
@@ -334,6 +339,15 @@ func (m *PodMutator) buildSidecarContainer(cfg *config.InjectionConfig, configJS
 		"--mode=sidecar",
 		fmt.Sprintf("--refresh-interval=%s", cfg.RefreshInterval),
 	}
+	port := cfg.HealthPort
+	if port == 0 {
+		port = defaultHealthPort
+	}
+	// Only pass the flag when it differs from the default, so the webhook keeps working with
+	// sidecar images that predate --health-port.
+	if port != defaultHealthPort {
+		args = append(args, fmt.Sprintf("--health-port=%d", port))
+	}
 
 	return corev1.Container{
 		Name:            "keeper-secrets-sidecar",
@@ -355,7 +369,7 @@ func (m *PodMutator) buildSidecarContainer(cfg *config.InjectionConfig, configJS
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path: "/healthz",
-					Port: intStrFromInt(8080),
+					Port: intStrFromInt(port),
 				},
 			},
 			InitialDelaySeconds: 5,
@@ -365,7 +379,7 @@ func (m *PodMutator) buildSidecarContainer(cfg *config.InjectionConfig, configJS
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path: "/readyz",
-					Port: intStrFromInt(8080),
+					Port: intStrFromInt(port),
 				},
 			},
 			InitialDelaySeconds: 5,
@@ -522,4 +536,31 @@ func mustParseQuantity(s string) resource.Quantity {
 		panic(fmt.Sprintf("invalid quantity %s: %v", s, err))
 	}
 	return q
+}
+
+// defaultHealthPort matches sidecar.DefaultHealthPort.
+const defaultHealthPort = 8080
+
+// healthPortFor returns the sidecar health port for a pod. An explicit annotation wins. Otherwise
+// it is 8080 unless a container in the pod already declares that port, in which case the first
+// free port above it is used, so the sidecar and the application never compete for it. Ports an
+// application opens without declaring them can't be seen here; set the annotation then.
+func healthPortFor(pod *corev1.Pod, requested int) (int, error) {
+	if requested != 0 {
+		return requested, nil
+	}
+	used := map[int]bool{}
+	for _, list := range [][]corev1.Container{pod.Spec.InitContainers, pod.Spec.Containers} {
+		for _, c := range list {
+			for _, p := range c.Ports {
+				used[int(p.ContainerPort)] = true
+			}
+		}
+	}
+	for port := defaultHealthPort; port <= 65535; port++ {
+		if !used[port] {
+			return port, nil
+		}
+	}
+	return 0, fmt.Errorf("no free port for the sidecar health server at or above %d; set %s", defaultHealthPort, config.AnnotationHealthPort)
 }

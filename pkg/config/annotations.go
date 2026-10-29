@@ -2,6 +2,7 @@
 package config
 
 import (
+	"strconv"
 	"fmt"
 	"strings"
 
@@ -19,6 +20,11 @@ const (
 	AnnotationSecrets    = AnnotationPrefix + "secrets"
 	AnnotationConfig     = AnnotationPrefix + "config"
 	AnnotationKSMConfig  = AnnotationPrefix + "ksm-config"
+	// AnnotationAuthSecretLegacy is the name used before v0.10.0. Still read when ksm-config is not set,
+	// so manifests written for older releases keep working after an upgrade.
+	AnnotationAuthSecretLegacy = AnnotationPrefix + "auth-secret"
+	// AnnotationHealthPort sets the port of the sidecar's health/metrics server (default 8080).
+	AnnotationHealthPort = AnnotationPrefix + "health-port"
 	AnnotationAuthMethod = AnnotationPrefix + "auth-method"
 
 	// Folder annotations
@@ -125,6 +131,9 @@ type InjectionConfig struct {
 	Folders []FolderRef
 	// AuthSecretName is the name of the K8s secret containing KSM credentials
 	AuthSecretName string
+	// HealthPort is the sidecar health/metrics port. 0 means "choose": 8080 unless a container
+	// in the pod already declares it.
+	HealthPort int
 	// AuthSecretNamespace is the namespace of the auth secret (defaults to pod namespace)
 	AuthSecretNamespace string
 	// AuthMethod: "secret" or "oidc"
@@ -192,6 +201,15 @@ func ParseAnnotations(pod *corev1.Pod) (*InjectionConfig, error) {
 	// Parse auth configuration
 	if authSecret, ok := annotations[AnnotationKSMConfig]; ok {
 		config.AuthSecretName = authSecret
+	} else if legacy, ok := annotations[AnnotationAuthSecretLegacy]; ok {
+		config.AuthSecretName = legacy
+	}
+	if v, ok := annotations[AnnotationHealthPort]; ok {
+		port, err := strconv.Atoi(strings.TrimSpace(v))
+		if err != nil || port < 1 || port > 65535 {
+			return nil, fmt.Errorf("invalid %s %q: must be a port number (1-65535)", AnnotationHealthPort, v)
+		}
+		config.HealthPort = port
 	}
 	if authMethod, ok := annotations[AnnotationAuthMethod]; ok {
 		switch authMethod {
