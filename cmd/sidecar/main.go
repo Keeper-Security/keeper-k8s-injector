@@ -77,6 +77,7 @@ func main() {
 		logLevel        string
 		logFormat       string
 		showVersion     bool
+		healthPort      int
 	)
 
 	flag.StringVar(&mode, "mode", "sidecar", "Operating mode: init or sidecar")
@@ -84,6 +85,7 @@ func main() {
 	flag.StringVar(&logLevel, "log-level", "info", "Log level (debug, info, warn, error)")
 	flag.StringVar(&logFormat, "log-format", "json", "Log format (json, console)")
 	flag.BoolVar(&showVersion, "version", false, "Print version information and exit")
+	flag.IntVar(&healthPort, "health-port", sidecar.DefaultHealthPort, "Port for the health and metrics server")
 	flag.Parse()
 
 	if showVersion {
@@ -220,6 +222,7 @@ func main() {
 		RefreshSignal:   cfg.RefreshSignal,
 		KSMConfig:       ksmConfig,
 		AuthMethod:      cfg.AuthMethod,
+		HealthPort:      healthPort,
 		Logger:          logger,
 
 		K8sSecretRotation:  cfg.K8sSecretRotation,

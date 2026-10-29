@@ -198,6 +198,7 @@ Templates support 100+ functions from [Sprig](http://masterminds.github.io/sprig
 | `keeper.security/fail-on-error` | `"true"` | Fail pod startup if secrets can't be fetched |
 | `keeper.security/signal` | `""` | Signal to send to the app on refresh (e.g., `"SIGHUP"`). **Not yet implemented / planned** — accepted but currently a no-op; no signal is actually delivered to the app container. |
 | `keeper.security/strict-lookup` | `"false"` | Fail if multiple records match title |
+| `keeper.security/health-port` | `8080` | Port of the sidecar's health and metrics server. If a container in the pod declares 8080, the next free port is used automatically; set this when the application listens on 8080 without declaring it |
 
 ### Environment Variable Injection Annotations
 
@@ -415,6 +416,7 @@ annotations:
 | Annotation | Default | Description |
 |------------|---------|-------------|
 | `keeper.security/ksm-config` | Required | K8s secret name with KSM config |
+| `keeper.security/auth-secret` | | Name used before v0.10.0 for `ksm-config`. Still read when `ksm-config` is not set |
 | `keeper.security/auth-method` | `"secret"` | Auth method (see below) |
 
 #### Cloud Provider Authentication

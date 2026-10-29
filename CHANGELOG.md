@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `keeper.security/health-port` annotation and sidecar `--health-port` flag for the sidecar's
+  health and metrics server
+
+### Fixed
+
+- The sidecar no longer shares port 8080 with an application container that declares it: the
+  webhook picks the next free port and points the sidecar's probes at it
+- `keeper.security/auth-secret` (the name used before v0.10.0) is read again when
+  `keeper.security/ksm-config` is not set
+
 ## [0.11.3] - 2026-08-26
 
 ### Security
