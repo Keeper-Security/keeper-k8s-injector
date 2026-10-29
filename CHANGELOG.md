@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.12.0] - 2026-10-29
+
+### Security
+
+- Update `google.golang.org/grpc` to 1.83.2 (GHSA-2v4p-qf9q-27wj, GHSA-vp52-pcj8-j9qc, GHSA-qc2q-p7wx-3px3)
+- Update `go.opentelemetry.io/otel/sdk` to 1.45.0 (GHSA-8wmf-6v46-5gfg)
 
 ### Added
 
