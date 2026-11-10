@@ -625,16 +625,8 @@ func escapeEnvValue(value string) string {
 		}
 	}
 	if needsQuotes {
-		// Use single quotes and escape existing single quotes
-		escaped := ""
-		for _, c := range value {
-			if c == '\'' {
-				escaped += "'\\''"
-			} else {
-				escaped += string(c)
-			}
-		}
-		return "'" + escaped + "'"
+		// Wrap in single quotes; close, escape and reopen around each embedded quote.
+		return "'" + strings.ReplaceAll(value, "'", `'\''`) + "'"
 	}
 	return value
 }
