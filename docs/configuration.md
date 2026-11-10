@@ -398,6 +398,8 @@ annotations:
 
 **Result**: Sidecar updates K8s Secret every 5 minutes with latest values from Keeper.
 
+**Permissions:** the sidecar updates the Secret as the pod's ServiceAccount, which needs `get` and `update` on that Secret. Without them the sidecar logs `forbidden` and the Secret keeps its old values. See [Sidecar permissions for K8s Secret rotation](rotation.md#sidecar-permissions-for-k8s-secret-rotation).
+
 #### Security Comparison
 
 | Aspect | Files (tmpfs) | Env Vars | K8s Secrets |

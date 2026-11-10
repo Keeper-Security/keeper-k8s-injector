@@ -306,6 +306,8 @@ annotations:
 
 **Note**: Applications must watch for Secret updates or use a tool like [Reloader](https://github.com/stakater/Reloader) to restart pods on Secret changes.
 
+**Permissions:** the sidecar updates the Secret as the pod's ServiceAccount, which needs `get` and `update` on that Secret. Without them the sidecar logs `forbidden` and the Secret keeps its old values. See [Sidecar permissions for K8s Secret rotation](rotation.md#sidecar-permissions-for-k8s-secret-rotation).
+
 ### Owner Reference Control
 
 The Secret is created during the pod's mutating-admission webhook — **before** the API server

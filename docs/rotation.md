@@ -267,6 +267,60 @@ annotations:
 2. If secrets changed, sidecar updates K8s Secret
 3. Apps using the Secret must watch for changes or use [Reloader](https://github.com/stakater/Reloader)
 
+The sidecar writes the same keys the webhook wrote when it created the Secret (`k8sSecretKeys`
+mapping, selected `fields`, or all fields) and follows `keeper.security/k8s-secret-mode`:
+`overwrite` (default) replaces the Secret's data, `merge` and `skip-if-exists` add the new values
+to the existing keys. The Secret type does not change.
+
+### Sidecar permissions for K8s Secret rotation
+
+The webhook creates the Secret with its own permissions, but during rotation the sidecar updates
+it as the **pod's** ServiceAccount. The default ServiceAccount cannot read or write Secrets, so the
+update fails with a log line like
+`failed to get K8s Secret ... is forbidden: User "system:serviceaccount:<ns>:default" cannot get resource "secrets"`
+and the Secret keeps its old values while the pod keeps running.
+
+Give the pod a ServiceAccount that can `get` and `update` that one Secret:
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app-secret-rotator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: update-app-secrets
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["app-secrets"]   # the k8s-secret-name value(s)
+    verbs: ["get", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: app-secret-rotator
+subjects:
+  - kind: ServiceAccount
+    name: app-secret-rotator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: update-app-secrets
+```
+
+and set it on the pod:
+
+```yaml
+spec:
+  serviceAccountName: app-secret-rotator
+```
+
+Create these in the pod's namespace. File-based rotation (the default injection mode) needs no
+extra permissions.
+
 **Limitation**: Most apps don't auto-reload when K8s Secrets change. You need:
 - App-level Secret watching (e.g., Kubernetes client)
 - External tool like Reloader to restart pods

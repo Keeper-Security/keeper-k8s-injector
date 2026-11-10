@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/keeper-security/keeper-k8s-injector/pkg/ksm"
 	"go.uber.org/zap"
 )
 
@@ -186,4 +187,44 @@ func containsAt(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+func TestRotatedSecretData_KeySelectionMatchesCreation(t *testing.T) {
+	data := &ksm.SecretData{Fields: map[string]interface{}{"login": "u", "password": "p2", "host": "h"}}
+	existing := map[string][]byte{"login": []byte("u"), "password": []byte("p1"), "stale": []byte("x")}
+
+	// Key mapping wins over field selection.
+	got := rotatedSecretData(existing, SecretConfig{
+		K8sSecretKeys: map[string]string{"password": "DB_PASSWORD"},
+		Fields:        []string{"login"},
+	}, data, "overwrite")
+	if len(got) != 1 || string(got["DB_PASSWORD"]) != "p2" {
+		t.Errorf("key mapping: got %v", got)
+	}
+
+	// Selected fields only.
+	got = rotatedSecretData(existing, SecretConfig{Fields: []string{"password"}}, data, "")
+	if len(got) != 1 || string(got["password"]) != "p2" {
+		t.Errorf("fields: got %v", got)
+	}
+
+	// All fields; overwrite drops keys that are no longer in the record.
+	got = rotatedSecretData(existing, SecretConfig{}, data, "overwrite")
+	if len(got) != 3 || string(got["password"]) != "p2" {
+		t.Errorf("all fields: got %v", got)
+	}
+	if _, ok := got["stale"]; ok {
+		t.Errorf("overwrite kept stale key: %v", got)
+	}
+}
+
+func TestRotatedSecretData_MergeKeepsExistingKeys(t *testing.T) {
+	data := &ksm.SecretData{Fields: map[string]interface{}{"password": "p2"}}
+	for _, mode := range []string{"merge", "skip-if-exists"} {
+		existing := map[string][]byte{"password": []byte("p1"), "user-key": []byte("keep")}
+		got := rotatedSecretData(existing, SecretConfig{}, data, mode)
+		if string(got["password"]) != "p2" || string(got["user-key"]) != "keep" {
+			t.Errorf("%s: got %v", mode, got)
+		}
+	}
 }

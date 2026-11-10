@@ -39,6 +39,7 @@ type secretsConfig struct {
 	// K8s Secret rotation (round-tripped from the webhook so the sidecar can refresh K8s Secrets)
 	K8sSecretRotation  bool   `json:"k8sSecretRotation,omitempty"`
 	K8sSecretNamespace string `json:"k8sSecretNamespace,omitempty"`
+	K8sSecretMode      string `json:"k8sSecretMode,omitempty"`
 }
 
 type secretEntry struct {
@@ -227,6 +228,7 @@ func main() {
 
 		K8sSecretRotation:  cfg.K8sSecretRotation,
 		K8sSecretNamespace: cfg.K8sSecretNamespace,
+		K8sSecretMode:      cfg.K8sSecretMode,
 	}
 
 	// Create and run agent

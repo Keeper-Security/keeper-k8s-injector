@@ -275,6 +275,11 @@ func (m *PodMutator) mutatePod(ctx context.Context, pod *corev1.Pod, cfg *config
 func (m *PodMutator) buildAgentEnv(cfg *config.InjectionConfig, configJSON string) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{Name: "KEEPER_CONFIG", Value: configJSON},
+		// The sidecar updates K8s Secrets in the pod's own namespace during rotation. The pod
+		// object at admission often has no namespace set, so use the downward API.
+		{Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
+		}},
 	}
 	if cfg.AuthMethod == "" || cfg.AuthMethod == "secret" {
 		env = append(env, corev1.EnvVar{
@@ -448,13 +453,19 @@ func (m *PodMutator) buildSidecarConfig(cfg *config.InjectionConfig) map[string]
 		if s.IsFile {
 			secret["isFile"] = s.IsFile
 		}
-		// Per-secret K8s-Secret fields must round-trip so the sidecar can refresh the
-		// Secret during rotation (updateK8sSecrets reads these from KEEPER_CONFIG).
-		if s.InjectAsK8sSecret {
+		// K8s-Secret fields must round-trip so the sidecar can refresh the Secret during
+		// rotation (updateK8sSecrets reads these from KEEPER_CONFIG). Use the same effective
+		// values the webhook used to create the Secret (filterK8sSecretConfigs and
+		// buildK8sSecret): the pod-level annotations apply when the entry sets nothing itself.
+		if s.InjectAsK8sSecret || cfg.InjectAsK8sSecret {
 			secret["injectAsK8sSecret"] = true
-		}
-		if s.K8sSecretName != "" {
-			secret["k8sSecretName"] = s.K8sSecretName
+			name := s.K8sSecretName
+			if name == "" {
+				name = cfg.K8sSecretName
+			}
+			if name != "" {
+				secret["k8sSecretName"] = name
+			}
 		}
 		if len(s.K8sSecretKeys) > 0 {
 			secret["k8sSecretKeys"] = s.K8sSecretKeys
@@ -492,6 +503,9 @@ func (m *PodMutator) buildSidecarConfig(cfg *config.InjectionConfig) map[string]
 	// K8s-Secret rotation: the sidecar needs these to refresh K8s Secrets on its interval.
 	if cfg.K8sSecretRotation {
 		result["k8sSecretRotation"] = true
+		if cfg.K8sSecretMode != "" {
+			result["k8sSecretMode"] = cfg.K8sSecretMode
+		}
 		if cfg.K8sSecretNamespace != "" {
 			result["k8sSecretNamespace"] = cfg.K8sSecretNamespace
 		}

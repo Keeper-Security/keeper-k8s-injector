@@ -57,7 +57,9 @@ Automatically updates Secrets when Keeper records change:
 kubectl apply -f rotation.yaml
 ```
 
-Sidecar updates Secret every 5 minutes.
+Sidecar updates Secret every 5 minutes. The manifest includes a ServiceAccount, Role and
+RoleBinding because the sidecar updates the Secret as the pod's ServiceAccount, which needs `get`
+and `update` on it (see [Sidecar permissions for K8s Secret rotation](../../docs/rotation.md#sidecar-permissions-for-k8s-secret-rotation)).
 
 ### 5. Conflict Resolution
 

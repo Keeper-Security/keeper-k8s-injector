@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Documentation and examples wrote secrets to paths outside `/keeper/secrets`, which made the init container fail. All output paths now use `/keeper/secrets`
 - The webhook rejects a pod whose output path is outside `/keeper/secrets`
+- `keeper.security/k8s-secret-rotation` did not update the Secret when it was configured with the pod-level `inject-as-k8s-secret` / `k8s-secret-name` annotations
+- K8s Secret rotation used the `default` namespace instead of the pod's namespace
+- K8s Secret rotation keeps the creation-time `k8s-secret-mode`: `overwrite` replaces the Secret's data instead of adding to it
 
 ## [0.12.0] - 2026-10-29
 

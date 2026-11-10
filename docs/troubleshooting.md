@@ -122,6 +122,17 @@ The init container cannot write anywhere else, and your containers would not see
 `keeper.security/secret-db: "my-record:/keeper/secrets/db.json"`. Subdirectories such as
 `/keeper/secrets/certs/server.pem` are fine.
 
+### K8s Secret not updated by rotation
+
+**Symptom**: `keeper.security/k8s-secret-rotation: "true"` is set but the Secret keeps old values.
+
+**Solution**:
+1. Check the sidecar logs: `kubectl logs my-pod -c keeper-secrets-sidecar`
+2. If they show `is forbidden: User "system:serviceaccount:<ns>:default" cannot get resource "secrets"`,
+   give the pod a ServiceAccount with `get` and `update` on the Secret. See
+   [Sidecar permissions for K8s Secret rotation](rotation.md#sidecar-permissions-for-k8s-secret-rotation).
+3. Make sure `keeper.security/init-only` is not `"true"`; rotation needs the sidecar.
+
 ### Secret not found
 
 **Error**: `no record found with title: my-secret`
