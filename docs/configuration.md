@@ -320,7 +320,7 @@ Create Kubernetes Secret objects directly from Keeper secrets, enabling native K
 | `keeper.security/k8s-secret-mode` | `"overwrite"` | Conflict resolution (`overwrite`, `merge`, `skip-if-exists`, `fail`) |
 | `keeper.security/k8s-secret-type` | `"Opaque"` | Secret type (`Opaque`, `kubernetes.io/tls`, etc.) |
 | `keeper.security/k8s-secret-rotation` | `"false"` | Enable sidecar rotation (updates Secret on refresh) |
-| `keeper.security/k8s-secret-owner-ref` | `"true"` | Auto-delete Secret when pod terminates |
+| `keeper.security/k8s-secret-owner-ref` | `"true"` | Reserved. No owner reference is attached today because the Secret is created before the pod has a UID; the Secret persists until deleted or the namespace is removed. See [Owner Reference Control](injection-modes.md#owner-reference-control) |
 
 #### Basic Usage
 

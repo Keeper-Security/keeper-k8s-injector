@@ -51,7 +51,7 @@ const (
 	AnnotationK8sSecretMode      = AnnotationPrefix + "k8s-secret-mode"      // Conflict resolution mode (overwrite|merge|skip-if-exists|fail)
 	AnnotationK8sSecretType      = AnnotationPrefix + "k8s-secret-type"      // Secret type (Opaque, kubernetes.io/tls, etc.)
 	AnnotationK8sSecretRotation  = AnnotationPrefix + "k8s-secret-rotation"  // Enable sidecar rotation (default: false)
-	AnnotationK8sSecretOwnerRef  = AnnotationPrefix + "k8s-secret-owner-ref" // Add owner reference for auto-cleanup (default: true)
+	AnnotationK8sSecretOwnerRef  = AnnotationPrefix + "k8s-secret-owner-ref" // Reserved: no owner reference is attached today (Secret is created before the pod has a UID)
 
 	// CA Certificate annotations (for corporate proxies/SSL inspection)
 	AnnotationCACertSecret    = AnnotationPrefix + "ca-cert-secret"    // K8s Secret name with CA cert
@@ -174,7 +174,7 @@ type InjectionConfig struct {
 	K8sSecretMode      string // Conflict resolution mode (overwrite|merge|skip-if-exists|fail)
 	K8sSecretType      string // Secret type (Opaque, kubernetes.io/tls, etc.)
 	K8sSecretRotation  bool   // Enable sidecar rotation (default: false)
-	K8sSecretOwnerRef  bool   // Add owner reference for auto-cleanup (default: true)
+	K8sSecretOwnerRef  bool   // Reserved (default: true). Has no effect at admission: the pod has no UID yet, so no owner reference is attached and the Secret outlives the pod
 }
 
 // ParseAnnotations extracts injection configuration from pod annotations
