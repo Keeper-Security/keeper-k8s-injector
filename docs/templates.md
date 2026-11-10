@@ -9,13 +9,13 @@ annotations:
   keeper.security/config: |
     secrets:
       - record: postgres-credentials
-        path: /app/config/database.sh
+        path: /keeper/secrets/database.sh
         template: |
           export DB_USER="{{ .login }}"
           export DB_PASS="{{ .password }}"
 ```
 
-Output (`/app/config/database.sh`):
+Output (`/keeper/secrets/database.sh`):
 ```sh
 export DB_USER="admin"
 export DB_PASS="secret123"
@@ -230,7 +230,7 @@ Sprig provides 100+ functions. See [Sprig Documentation](http://masterminds.gith
 keeper.security/config: |
   secrets:
     - record: postgres-credentials
-      path: /app/database-url.txt
+      path: /keeper/secrets/database-url.txt
       template: |
         postgresql://{{ .login }}:{{ .password | urlquery }}@{{ .hostname }}:{{ .port | default "5432" }}/{{ .database }}
 ```
@@ -241,7 +241,7 @@ keeper.security/config: |
 keeper.security/config: |
   secrets:
     - record: app-config
-      path: /app/application.properties
+      path: /keeper/secrets/application.properties
       template: |
         app.name={{ .appName | default "myapp" }}
         app.env={{ .environment | default "dev" }}
@@ -257,7 +257,7 @@ keeper.security/config: |
 keeper.security/config: |
   secrets:
     - record: app-config
-      path: /app/config.sh
+      path: /keeper/secrets/config.sh
       template: |
         {{- if eq .environment "production" -}}
         export API_URL="https://api.prod.example.com"
@@ -275,7 +275,7 @@ keeper.security/config: |
 keeper.security/config: |
   secrets:
     - record: tls-config
-      path: /app/nginx.conf
+      path: /keeper/secrets/nginx.conf
       template: |
         server {
           listen 443 ssl;
@@ -292,7 +292,7 @@ keeper.security/config: |
 keeper.security/config: |
   secrets:
     - record: deployment-credentials
-      path: /app/deploy.sh
+      path: /keeper/secrets/deploy.sh
       template: |
         #!/bin/bash
         set -e
@@ -391,7 +391,7 @@ Test template rendering before production:
 kubectl apply -f test-template.yaml
 
 # Verify output
-kubectl exec deploy/myapp -- cat /app/config.txt
+kubectl exec deploy/myapp -- cat /keeper/secrets/config.txt
 ```
 
 ## Troubleshooting

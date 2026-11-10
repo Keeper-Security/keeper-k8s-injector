@@ -94,6 +94,7 @@ type AgentConfig struct {
 	// K8s Secret rotation (v0.9.0)
 	K8sSecretRotation  bool   // Enable K8s Secret updates during rotation
 	K8sSecretNamespace string // Namespace for K8s Secrets (defaults to pod namespace)
+	K8sSecretMode      string // Same conflict mode the webhook used at creation (overwrite|merge|...)
 }
 
 // Agent manages secret fetching and rotation
@@ -712,31 +713,7 @@ func (a *Agent) updateK8sSecrets(ctx context.Context) error {
 			continue
 		}
 
-		// Update Secret data
-		if secret.Data == nil {
-			secret.Data = make(map[string][]byte)
-		}
-
-		if len(secretCfg.K8sSecretKeys) > 0 {
-			// Custom key mapping
-			for keeperField, k8sKey := range secretCfg.K8sSecretKeys {
-				if value, ok := data.Fields[keeperField]; ok {
-					secret.Data[k8sKey] = valueToBytes(value)
-				}
-			}
-		} else if len(secretCfg.Fields) > 0 {
-			// Selected fields
-			for _, field := range secretCfg.Fields {
-				if value, ok := data.Fields[field]; ok {
-					secret.Data[field] = valueToBytes(value)
-				}
-			}
-		} else {
-			// All fields
-			for field, value := range data.Fields {
-				secret.Data[field] = valueToBytes(value)
-			}
-		}
+		secret.Data = rotatedSecretData(secret.Data, secretCfg, data, a.config.K8sSecretMode)
 
 		// Update K8s Secret
 		_, err = a.k8sClient.CoreV1().Secrets(namespace).Update(ctx, secret, metav1.UpdateOptions{})
@@ -752,6 +729,53 @@ func (a *Agent) updateK8sSecrets(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// k8sSecretDataFor builds the Secret data for one entry. It selects keys exactly like the
+// webhook's buildK8sSecret does at creation (key mapping, then selected fields, then all
+// fields), so a rotation does not change the Secret's shape.
+func k8sSecretDataFor(secretCfg SecretConfig, data *ksm.SecretData) map[string][]byte {
+	out := make(map[string][]byte)
+	switch {
+	case len(secretCfg.K8sSecretKeys) > 0:
+		for keeperField, k8sKey := range secretCfg.K8sSecretKeys {
+			if value, ok := data.Fields[keeperField]; ok {
+				out[k8sKey] = valueToBytes(value)
+			}
+		}
+	case len(secretCfg.Fields) > 0:
+		for _, field := range secretCfg.Fields {
+			if value, ok := data.Fields[field]; ok {
+				out[field] = valueToBytes(value)
+			}
+		}
+	default:
+		for field, value := range data.Fields {
+			out[field] = valueToBytes(value)
+		}
+	}
+	return out
+}
+
+// rotatedSecretData returns the Secret data after a rotation, following the same
+// k8s-secret-mode the webhook applied at creation. "overwrite" (the default) and "fail"
+// mean the webhook wrote the whole Secret, so the data is replaced. "merge" adds the new keys
+// on top of the existing ones; "skip-if-exists" merges too, so keys in a Secret the user
+// created themselves are never dropped.
+func rotatedSecretData(existing map[string][]byte, secretCfg SecretConfig, data *ksm.SecretData, mode string) map[string][]byte {
+	fresh := k8sSecretDataFor(secretCfg, data)
+	switch mode {
+	case "", "overwrite", "fail":
+		return fresh
+	}
+	merged := make(map[string][]byte)
+	for k, v := range existing {
+		merged[k] = v
+	}
+	for k, v := range fresh {
+		merged[k] = v
+	}
+	return merged
 }
 
 // valueToBytes converts a value to []byte for K8s Secret

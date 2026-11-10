@@ -184,35 +184,35 @@ The password should update automatically!
 ### With keeper:// prefix
 
 ```yaml
-keeper.security/secret-db-pass: "keeper://Production/Databases/mysql-prod/field/password:/app/secrets/db-pass"
+keeper.security/secret-db-pass: "keeper://Production/Databases/mysql-prod/field/password:/keeper/secrets/db-pass"
 ```
 
 ### Without prefix (also works)
 
 ```yaml
-keeper.security/secret-db-pass: "Production/Databases/mysql-prod/field/password:/app/secrets/db-pass"
+keeper.security/secret-db-pass: "Production/Databases/mysql-prod/field/password:/keeper/secrets/db-pass"
 ```
 
 ### Supported Selectors
 
 ```yaml
 # Extract field
-keeper.security/secret-pass: "Production/Databases/mysql-prod/field/password:/app/secrets/pass.txt"
+keeper.security/secret-pass: "Production/Databases/mysql-prod/field/password:/keeper/secrets/pass.txt"
 
 # Extract custom field
-keeper.security/secret-token: "Production/APIs/stripe/custom_field/api_token:/app/secrets/token.txt"
+keeper.security/secret-token: "Production/APIs/stripe/custom_field/api_token:/keeper/secrets/token.txt"
 
 # Download file attachment
-keeper.security/secret-cert: "Production/Certs/ssl-cert/file/cert.pem:/app/certs/cert.pem"
+keeper.security/secret-cert: "Production/Certs/ssl-cert/file/cert.pem:/keeper/secrets/certs/cert.pem"
 
 # Get record type
-keeper.security/secret-type: "Production/Databases/mysql-prod/type:/app/metadata/type.txt"
+keeper.security/secret-type: "Production/Databases/mysql-prod/type:/keeper/secrets/metadata/type.txt"
 
 # Get record title
-keeper.security/secret-title: "Production/Databases/mysql-prod/title:/app/metadata/title.txt"
+keeper.security/secret-title: "Production/Databases/mysql-prod/title:/keeper/secrets/metadata/title.txt"
 
 # Get entire record (no selector)
-keeper.security/secret-full: "Production/Databases/mysql-prod:/app/secrets/full-record.json"
+keeper.security/secret-full: "Production/Databases/mysql-prod:/keeper/secrets/full-record.json"
 ```
 
 ## Folder vs. UID: When to Use Each

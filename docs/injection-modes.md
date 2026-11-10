@@ -57,8 +57,8 @@ annotations:
 
 ```yaml
 annotations:
-  keeper.security/secret-db: "/app/config/database.json"
-  keeper.security/secret-api: "/etc/app/api-keys.json"
+  keeper.security/secret-db: "/keeper/secrets/database.json"
+  keeper.security/secret-api: "/keeper/secrets/api-keys.json"
 ```
 
 ### With Format Conversion
@@ -68,16 +68,16 @@ annotations:
   keeper.security/config: |
     secrets:
       - record: database-credentials
-        path: /app/config/db.env
+        path: /keeper/secrets/db.env
         format: env
       - record: api-config
-        path: /app/config/api.properties
+        path: /keeper/secrets/api.properties
         format: properties
 ```
 
 **Result:**
-- `/app/config/db.env` in environment file format
-- `/app/config/api.properties` in Java properties format
+- `/keeper/secrets/db.env` in environment file format
+- `/keeper/secrets/api.properties` in Java properties format
 
 ### When to Use Files
 
@@ -305,6 +305,8 @@ annotations:
 **Result**: Sidecar updates K8s Secret every 5 minutes with latest values from Keeper.
 
 **Note**: Applications must watch for Secret updates or use a tool like [Reloader](https://github.com/stakater/Reloader) to restart pods on Secret changes.
+
+**Permissions:** the sidecar updates the Secret as the pod's ServiceAccount, which needs `get` and `update` on that Secret. Without them the sidecar logs `forbidden` and the Secret keeps its old values. See [Sidecar permissions for K8s Secret rotation](rotation.md#sidecar-permissions-for-k8s-secret-rotation).
 
 ### Owner Reference Control
 

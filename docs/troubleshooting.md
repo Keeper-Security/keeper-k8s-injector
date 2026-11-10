@@ -111,6 +111,28 @@ annotations:
   keeper.security/fail-on-error: "false"
 ```
 
+### Pod rejected: "output path ... must be under /keeper/secrets"
+
+**Error** (from `kubectl apply`): `admission webhook "pods.keeper.security" denied the request: invalid injection configuration: secret "my-record": output path "/app/secrets/db.json" must be under /keeper/secrets`
+
+**Cause**: secrets can only be written to the shared in-memory volume mounted at `/keeper/secrets`.
+The init container cannot write anywhere else, and your containers would not see it.
+
+**Solution**: change the path to one under `/keeper/secrets`, for example
+`keeper.security/secret-db: "my-record:/keeper/secrets/db.json"`. Subdirectories such as
+`/keeper/secrets/certs/server.pem` are fine.
+
+### K8s Secret not updated by rotation
+
+**Symptom**: `keeper.security/k8s-secret-rotation: "true"` is set but the Secret keeps old values.
+
+**Solution**:
+1. Check the sidecar logs: `kubectl logs my-pod -c keeper-secrets-sidecar`
+2. If they show `is forbidden: User "system:serviceaccount:<ns>:default" cannot get resource "secrets"`,
+   give the pod a ServiceAccount with `get` and `update` on the Secret. See
+   [Sidecar permissions for K8s Secret rotation](rotation.md#sidecar-permissions-for-k8s-secret-rotation).
+3. Make sure `keeper.security/init-only` is not `"true"`; rotation needs the sidecar.
+
 ### Secret not found
 
 **Error**: `no record found with title: my-secret`

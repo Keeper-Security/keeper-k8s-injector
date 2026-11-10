@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Documentation and examples wrote secrets to paths outside `/keeper/secrets`, which made the init container fail. All output paths now use `/keeper/secrets`
+- The webhook rejects a pod whose output path is outside `/keeper/secrets`
+- `keeper.security/k8s-secret-rotation` did not update the Secret when it was configured with the pod-level `inject-as-k8s-secret` / `k8s-secret-name` annotations
+- K8s Secret rotation used the `default` namespace instead of the pod's namespace
+- K8s Secret rotation keeps the creation-time `k8s-secret-mode`: `overwrite` replaces the Secret's data instead of adding to it
+- `keeper.security/k8s-secret-owner-ref` is documented as reserved. The Secret is created at admission, before the pod has a UID, so no owner reference is attached and the Secret is not deleted with the pod. The 0.9.0 entry claimed automatic cleanup
+
 ## [0.12.0] - 2026-10-29
 
 ### Security
@@ -75,7 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for all K8s Secret types: Opaque, kubernetes.io/tls, dockerconfigjson, basic-auth, ssh-auth
 - Conflict resolution modes: overwrite, merge, skip-if-exists, fail
 - Sidecar rotation support for K8s Secrets via `keeper.security/k8s-secret-rotation`
-- Owner references for automatic Secret cleanup when pod terminates
+- `keeper.security/k8s-secret-owner-ref` annotation (no owner reference is attached in practice, see Unreleased)
 - Cross-namespace Secret creation via `keeper.security/k8s-secret-namespace`
 - Folder-based batch creation with `k8sSecretNamePrefix`
 - K8s Secret size validation (1MB limit)

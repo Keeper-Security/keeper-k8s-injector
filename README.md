@@ -154,8 +154,8 @@ keeper.security/secrets: "database-creds, api-keys, tls-cert"
 ### Custom Paths
 
 ```yaml
-keeper.security/secret-db: "/app/config/database.json"
-keeper.security/secret-api: "/etc/myapp/api.json"
+keeper.security/secret-db: "/keeper/secrets/database.json"
+keeper.security/secret-api: "/keeper/secrets/api.json"
 ```
 
 ### With Rotation
@@ -173,19 +173,19 @@ keeper.security/signal: "SIGHUP"   # planned; currently a no-op
 ### Keeper Notation (Specific Fields)
 
 ```yaml
-keeper.security/secret-password: "keeper://QabbPIdM8Unw4hwVM-F8VQ/field/password:/app/secrets/db-pass"
+keeper.security/secret-password: "keeper://QabbPIdM8Unw4hwVM-F8VQ/field/password:/keeper/secrets/db-pass"
 ```
 
 ### File Attachments
 
 ```yaml
-keeper.security/file-cert: "Database Credentials:cert.pem:/app/certs/server.pem"
+keeper.security/file-cert: "Database Credentials:cert.pem:/keeper/secrets/certs/server.pem"
 ```
 
 Keeper notation also works for file attachments:
 
 ```yaml
-keeper.security/file-cert: "keeper://Database Credentials/file/cert.pem:/app/certs/server.pem"
+keeper.security/file-cert: "keeper://Database Credentials/file/cert.pem:/keeper/secrets/certs/server.pem"
 ```
 
 ## Comparison with External Secrets Operator (ESO)

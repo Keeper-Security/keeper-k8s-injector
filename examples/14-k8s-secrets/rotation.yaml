@@ -1,3 +1,32 @@
+# The sidecar updates the Secret as the pod's ServiceAccount, so it needs
+# get/update on that one Secret. The default ServiceAccount cannot do this.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app-secret-rotator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: update-app-secrets
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["app-secrets"]
+    verbs: ["get", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: app-secret-rotator
+subjects:
+  - kind: ServiceAccount
+    name: app-secret-rotator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: update-app-secrets
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -16,6 +45,7 @@ metadata:
     keeper.security/refresh-interval: "5m"
     keeper.security/init-only: "false"  # Required for rotation
 spec:
+  serviceAccountName: app-secret-rotator
   containers:
     - name: app
       image: nginx:alpine

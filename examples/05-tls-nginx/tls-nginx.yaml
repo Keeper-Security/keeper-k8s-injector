@@ -36,8 +36,8 @@ data:
         server_name localhost;
 
         # TLS certificates from Keeper
-        ssl_certificate /app/certs/server.crt;
-        ssl_certificate_key /app/certs/server.key;
+        ssl_certificate /keeper/secrets/certs/server.crt;
+        ssl_certificate_key /keeper/secrets/certs/server.key;
 
         # TLS settings
         ssl_protocols TLSv1.2 TLSv1.3;
@@ -79,8 +79,8 @@ spec:
         keeper.security/ksm-config: "keeper-credentials"
         # Inject TLS certificate files from Keeper record
         # Format: keeper.security/file-{name}: "{record-title}:{filename}:{path}"
-        keeper.security/file-cert: "tls-certificate:server.crt:/app/certs/server.crt"
-        keeper.security/file-key: "tls-certificate:server.key:/app/certs/server.key"
+        keeper.security/file-cert: "tls-certificate:server.crt:/keeper/secrets/certs/server.crt"
+        keeper.security/file-key: "tls-certificate:server.key:/keeper/secrets/certs/server.key"
         # Check for certificate updates every 12 hours
         keeper.security/refresh-interval: "12h"
     spec:
@@ -174,8 +174,8 @@ spec:
 
               <h3>Certificate Details</h3>
               <div class="cert-info">
-          Certificate: /app/certs/server.crt
-          Private Key: /app/certs/server.key
+          Certificate: /keeper/secrets/certs/server.crt
+          Private Key: /keeper/secrets/certs/server.key
           Managed by: Keeper Secrets Manager
               </div>
             </div>
@@ -185,7 +185,7 @@ spec:
               <p>When you update the certificate files in Keeper:</p>
               <ol>
                 <li>The sidecar detects the change (checks every 12 hours)</li>
-                <li>New certificate files are written to <code>/app/certs/</code></li>
+                <li>New certificate files are written to <code>/keeper/secrets/certs/</code></li>
                 <li>NGINX picks up the new certificates automatically</li>
                 <li><strong>No pod restart required!</strong></li>
               </ol>
@@ -212,7 +212,7 @@ spec:
 
           # Wait for certificates to be injected
           echo "Waiting for TLS certificates..."
-          until [ -f /app/certs/server.crt ] && [ -f /app/certs/server.key ]; do
+          until [ -f /keeper/secrets/certs/server.crt ] && [ -f /keeper/secrets/certs/server.key ]; do
             sleep 2
           done
           echo "Certificates found! Starting NGINX..."

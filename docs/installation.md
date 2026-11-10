@@ -172,7 +172,7 @@ kubectl port-forward svc/hello-secrets 8080:80
 ## Next Steps
 
 - Add multiple secrets: `keeper.security/secrets: "secret1, secret2, secret3"`
-- Custom paths: `keeper.security/secret-myapp: "/app/config/secrets.json"`
+- Custom paths: `keeper.security/secret-myapp: "/keeper/secrets/secrets.json"`
 - Adjust refresh interval: `keeper.security/refresh-interval: "5m"`
 
 See [Annotation Reference](configuration.md#annotation-reference) for all options.

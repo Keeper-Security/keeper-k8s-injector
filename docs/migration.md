@@ -110,6 +110,7 @@ metadata:
     keeper.security/k8s-secret-rotation: "true"
     keeper.security/refresh-interval: "1h"
 spec:
+  serviceAccountName: app-secret-rotator  # needs get/update on app-secrets, see below
   containers:
     - name: app
       env:
@@ -124,6 +125,8 @@ spec:
               name: app-secrets
               key: password
 ```
+
+**Permissions:** the sidecar updates the Secret as the pod's ServiceAccount, which needs `get` and `update` on that Secret. Without them the sidecar logs `forbidden` and the Secret keeps its old values. See [Sidecar permissions for K8s Secret rotation](rotation.md#sidecar-permissions-for-k8s-secret-rotation).
 
 #### Step 4: Remove ESO Resources
 

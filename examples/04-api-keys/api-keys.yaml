@@ -37,9 +37,9 @@ spec:
         # Reference to your KSM auth secret
         keeper.security/ksm-config: "keeper-credentials"
         # Inject multiple API keys to custom paths
-        keeper.security/secret-stripe: "stripe-api-key:/app/secrets/stripe.json"
-        keeper.security/secret-slack: "slack-webhook:/app/secrets/slack.json"
-        keeper.security/secret-aws: "aws-credentials:/app/secrets/aws.json"
+        keeper.security/secret-stripe: "stripe-api-key:/keeper/secrets/stripe.json"
+        keeper.security/secret-slack: "slack-webhook:/keeper/secrets/slack.json"
+        keeper.security/secret-aws: "aws-credentials:/keeper/secrets/aws.json"
         # Refresh every 5 minutes
         keeper.security/refresh-interval: "5m"
     spec:
@@ -82,9 +82,9 @@ spec:
             TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
             # Check all secrets
-            STRIPE_ROW=$(check_secret "/app/secrets/stripe.json" "Stripe API Key")
-            SLACK_ROW=$(check_secret "/app/secrets/slack.json" "Slack Webhook")
-            AWS_ROW=$(check_secret "/app/secrets/aws.json" "AWS Credentials")
+            STRIPE_ROW=$(check_secret "/keeper/secrets/stripe.json" "Stripe API Key")
+            SLACK_ROW=$(check_secret "/keeper/secrets/slack.json" "Slack Webhook")
+            AWS_ROW=$(check_secret "/keeper/secrets/aws.json" "AWS Credentials")
 
             cat > /usr/share/nginx/html/index.html << 'HTMLEOF'
           <!DOCTYPE html>
@@ -172,9 +172,9 @@ spec:
 
               <div class="paths">
                 <strong>File Locations:</strong><br>
-                /app/secrets/stripe.json<br>
-                /app/secrets/slack.json<br>
-                /app/secrets/aws.json
+                /keeper/secrets/stripe.json<br>
+                /keeper/secrets/slack.json<br>
+                /keeper/secrets/aws.json
               </div>
 
               <p class="timestamp">Last updated: TIMESTAMP_PLACEHOLDER</p>

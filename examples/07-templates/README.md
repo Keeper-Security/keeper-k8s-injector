@@ -111,7 +111,7 @@ export DB_USER="dbuser"
 export DB_PASS="mysecretpassword"
 ```
 
-**Use case:** Source in shell scripts: `source /app/examples/03-database.sh`
+**Use case:** Source in shell scripts: `source /keeper/secrets/examples/03-database.sh`
 
 ### Example 4: INI Format
 

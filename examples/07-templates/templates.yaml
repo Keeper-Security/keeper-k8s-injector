@@ -41,13 +41,13 @@ spec:
           secrets:
             # Example 1: Connection string template
             - record: postgres-credentials
-              path: /app/examples/01-connection-string.txt
+              path: /keeper/secrets/examples/01-connection-string.txt
               template: |
                 postgresql://{{ .login }}:{{ .password }}@{{ .hostname | default "postgres" }}:5432/{{ .database | default "mydb" }}
 
             # Example 2: Properties file
             - record: postgres-credentials
-              path: /app/examples/02-application.properties
+              path: /keeper/secrets/examples/02-application.properties
               template: |
                 app.database.url=jdbc:postgresql://{{ .hostname | default "localhost" }}:5432/mydb
                 app.database.username={{ .login }}
@@ -56,7 +56,7 @@ spec:
 
             # Example 3: Environment variables script
             - record: postgres-credentials
-              path: /app/examples/03-database.sh
+              path: /keeper/secrets/examples/03-database.sh
               template: |
                 #!/bin/bash
                 export DB_HOST="{{ .hostname | default "localhost" }}"
@@ -68,7 +68,7 @@ spec:
 
             # Example 4: INI configuration
             - record: postgres-credentials
-              path: /app/examples/04-database.ini
+              path: /keeper/secrets/examples/04-database.ini
               template: |
                 [database]
                 host={{ .hostname | default "localhost" }}
@@ -79,7 +79,7 @@ spec:
 
             # Example 5: Using template functions
             - record: postgres-credentials
-              path: /app/examples/05-functions.txt
+              path: /keeper/secrets/examples/05-functions.txt
               template: |
                 Uppercase: {{ .login | upper }}
                 Lowercase: {{ .hostname | default "LOCALHOST" | lower }}
@@ -89,7 +89,7 @@ spec:
 
             # Example 6: Conditional logic
             - record: app-config
-              path: /app/examples/06-conditional.conf
+              path: /keeper/secrets/examples/06-conditional.conf
               template: |
                 {{- if eq .environment "production" -}}
                 # Production configuration
@@ -164,7 +164,7 @@ spec:
           EOF
 
           # Add each example to the page
-          for i in /app/examples/*.txt /app/examples/*.sh /app/examples/*.properties /app/examples/*.ini /app/examples/*.conf; do
+          for i in /keeper/secrets/examples/*.txt /keeper/secrets/examples/*.sh /keeper/secrets/examples/*.properties /keeper/secrets/examples/*.ini /keeper/secrets/examples/*.conf; do
             if [ -f "$i" ]; then
               filename=$(basename "$i")
               echo "<div class='example'><h3>$filename</h3><pre>$(cat "$i" | head -20)</pre></div>" >> /usr/share/nginx/html/index.html
