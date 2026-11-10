@@ -88,8 +88,8 @@ You should see:
 
 ```yaml
 annotations:
-  keeper.security/file-cert: "tls-certificate:server.crt:/app/certs/server.crt"
-  keeper.security/file-key: "tls-certificate:server.key:/app/certs/server.key"
+  keeper.security/file-cert: "tls-certificate:server.crt:/keeper/secrets/certs/server.crt"
+  keeper.security/file-key: "tls-certificate:server.key:/keeper/secrets/certs/server.key"
 ```
 
 Format: `keeper.security/file-{name}: "{record-title}:{attachment-filename}:{destination-path}"`
@@ -97,8 +97,8 @@ Format: `keeper.security/file-{name}: "{record-title}:{attachment-filename}:{des
 ### Certificate Location
 
 The sidecar downloads file attachments and writes them to the specified paths:
-- `/app/certs/server.crt` - Certificate
-- `/app/certs/server.key` - Private key
+- `/keeper/secrets/certs/server.crt` - Certificate
+- `/keeper/secrets/certs/server.key` - Private key
 
 NGINX reads these files to serve HTTPS traffic.
 
@@ -171,12 +171,12 @@ kubectl delete configmap nginx-tls-config
 
 1. Check if certificates were injected:
    ```bash
-   kubectl exec deployment/nginx-tls -- ls -la /app/certs/
+   kubectl exec deployment/nginx-tls -- ls -la /keeper/secrets/certs/
    ```
 
 2. Verify certificate format:
    ```bash
-   kubectl exec deployment/nginx-tls -- openssl x509 -in /app/certs/server.crt -text -noout
+   kubectl exec deployment/nginx-tls -- openssl x509 -in /keeper/secrets/certs/server.crt -text -noout
    ```
 
 3. Check sidecar logs:
@@ -195,8 +195,8 @@ kubectl delete configmap nginx-tls-config
 1. Verify certificate and key match:
    ```bash
    kubectl exec deployment/nginx-tls -- sh -c "
-     openssl x509 -noout -modulus -in /app/certs/server.crt | openssl md5 &&
-     openssl rsa -noout -modulus -in /app/certs/server.key | openssl md5
+     openssl x509 -noout -modulus -in /keeper/secrets/certs/server.crt | openssl md5 &&
+     openssl rsa -noout -modulus -in /keeper/secrets/certs/server.key | openssl md5
    "
    ```
 
@@ -209,10 +209,10 @@ kubectl delete configmap nginx-tls-config
 For multiple domains, use SNI (Server Name Indication):
 
 ```yaml
-keeper.security/file-cert-example-com: "cert-example-com:server.crt:/app/certs/example.com.crt"
-keeper.security/file-key-example-com: "cert-example-com:server.key:/app/certs/example.com.key"
-keeper.security/file-cert-api: "cert-api:server.crt:/app/certs/api.example.com.crt"
-keeper.security/file-key-api: "cert-api:server.key:/app/certs/api.example.com.key"
+keeper.security/file-cert-example-com: "cert-example-com:server.crt:/keeper/secrets/certs/example.com.crt"
+keeper.security/file-key-example-com: "cert-example-com:server.key:/keeper/secrets/certs/example.com.key"
+keeper.security/file-cert-api: "cert-api:server.crt:/keeper/secrets/certs/api.example.com.crt"
+keeper.security/file-key-api: "cert-api:server.key:/keeper/secrets/certs/api.example.com.key"
 ```
 
 ### Certificate chain
@@ -220,8 +220,8 @@ keeper.security/file-key-api: "cert-api:server.key:/app/certs/api.example.com.ke
 Include intermediate certificates:
 
 ```yaml
-keeper.security/file-cert: "tls-certificate:fullchain.pem:/app/certs/server.crt"
-keeper.security/file-key: "tls-certificate:privkey.pem:/app/certs/server.key"
+keeper.security/file-cert: "tls-certificate:fullchain.pem:/keeper/secrets/certs/server.crt"
+keeper.security/file-key: "tls-certificate:privkey.pem:/keeper/secrets/certs/server.key"
 ```
 
 ## Next Steps

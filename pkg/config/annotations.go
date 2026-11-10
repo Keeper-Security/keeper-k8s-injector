@@ -2,8 +2,9 @@
 package config
 
 import (
-	"strconv"
 	"fmt"
+	"path"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -382,8 +383,30 @@ func ParseAnnotations(pod *corev1.Pod) (*InjectionConfig, error) {
 	if config.AuthSecretName == "" && config.AuthMethod == "secret" {
 		return nil, fmt.Errorf("ksm-config annotation required when using secret auth method")
 	}
+	for _, s := range config.Secrets {
+		if err := ValidateOutputPath(s.Path); err != nil {
+			return nil, fmt.Errorf("secret %q: %w", s.Name, err)
+		}
+	}
+	for _, f := range config.Folders {
+		if err := ValidateOutputPath(f.OutputPath); err != nil {
+			return nil, fmt.Errorf("folder output: %w", err)
+		}
+	}
 
 	return config, nil
+}
+
+// ValidateOutputPath rejects output paths outside DefaultSecretsPath. The init container
+// and sidecar can only write to the shared tmpfs mounted there, and it is the only path the
+// app containers see, so any other path makes the init container fail and the pod never
+// starts. Rejecting at admission surfaces the mistake at kubectl apply time instead.
+func ValidateOutputPath(p string) error {
+	clean := path.Clean(p)
+	if clean == DefaultSecretsPath || strings.HasPrefix(clean, DefaultSecretsPath+"/") {
+		return nil
+	}
+	return fmt.Errorf("output path %q must be under %s", p, DefaultSecretsPath)
 }
 
 // parseSecretAnnotation parses Level 3/4 annotation values

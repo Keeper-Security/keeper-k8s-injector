@@ -100,6 +100,8 @@ All annotations use the `keeper.security/` prefix.
 
 ### Secret Selection
 
+Output paths must be inside `/keeper/secrets` (subdirectories are fine); it is the only directory shared with your containers. The webhook rejects a pod whose output path is anywhere else.
+
 #### Level 1: Single Secret (Simplest)
 
 ```yaml
@@ -131,8 +133,8 @@ Result:
 annotations:
   keeper.security/inject: "true"
   keeper.security/ksm-config: "keeper-auth"
-  keeper.security/secret-database: "/app/config/db.json"
-  keeper.security/secret-api: "/etc/myapp/api-keys.json"
+  keeper.security/secret-database: "/keeper/secrets/db.json"
+  keeper.security/secret-api: "/keeper/secrets/api-keys.json"
 ```
 
 #### Level 4: Field Extraction
@@ -143,10 +145,10 @@ Extract specific fields from a record:
 annotations:
   keeper.security/inject: "true"
   keeper.security/ksm-config: "keeper-auth"
-  keeper.security/secret-password: "database-creds[password]:/app/secrets/db-pass"
+  keeper.security/secret-password: "database-creds[password]:/keeper/secrets/db-pass"
 ```
 
-Result: `/app/secrets/db-pass` contains only the password value (raw, not JSON)
+Result: `/keeper/secrets/db-pass` contains only the password value (raw, not JSON)
 
 #### Level 5: Full Configuration
 
@@ -159,11 +161,11 @@ annotations:
   keeper.security/config: |
     secrets:
       - record: database-credentials
-        path: /app/config/db.json
+        path: /keeper/secrets/db.json
         fields: [login, password]
         format: env
       - record: api-keys
-        path: /app/config/api.json
+        path: /keeper/secrets/api.json
         format: json
 ```
 
@@ -178,7 +180,7 @@ annotations:
   keeper.security/config: |
     secrets:
       - record: postgres-credentials
-        path: /app/config/database.sh
+        path: /keeper/secrets/database.sh
         template: |
           export DB_USER="{{ .login }}"
           export DB_PASS="{{ .password }}"
@@ -537,13 +539,13 @@ annotations:
   keeper.security/inject: "true"
   keeper.security/ksm-config: "keeper-auth"
   # Format: keeper://UID/field/FIELDNAME:OUTPUT_PATH
-  keeper.security/secret-password: "keeper://QabbPIdM8Unw4hwVM-F8VQ/field/password:/app/secrets/db-pass"
-  keeper.security/secret-login: "keeper://QabbPIdM8Unw4hwVM-F8VQ/field/login:/app/secrets/db-user"
+  keeper.security/secret-password: "keeper://QabbPIdM8Unw4hwVM-F8VQ/field/password:/keeper/secrets/db-pass"
+  keeper.security/secret-login: "keeper://QabbPIdM8Unw4hwVM-F8VQ/field/login:/keeper/secrets/db-user"
 ```
 
 Result:
-- `/app/secrets/db-pass` contains the password value (raw text)
-- `/app/secrets/db-user` contains the login value (raw text)
+- `/keeper/secrets/db-pass` contains the password value (raw text)
+- `/keeper/secrets/db-user` contains the login value (raw text)
 
 #### Notation Syntax
 
@@ -569,13 +571,13 @@ annotations:
   keeper.security/ksm-config: "keeper-auth"
 
   # Reference secret by folder path + title
-  keeper.security/secret-db-pass: "keeper://Production/Databases/mysql-credentials/field/password:/app/secrets/db-pass"
+  keeper.security/secret-db-pass: "keeper://Production/Databases/mysql-credentials/field/password:/keeper/secrets/db-pass"
 
   # Without keeper:// prefix
-  keeper.security/secret-api-key: "Dev/APIs/stripe-api/field/api_key:/app/secrets/api-key"
+  keeper.security/secret-api-key: "Dev/APIs/stripe-api/field/api_key:/keeper/secrets/api-key"
 
   # Nested folders
-  keeper.security/secret-cert: "Production/Region/US-East/Databases/postgres/field/certificate:/app/certs/cert.pem"
+  keeper.security/secret-cert: "Production/Region/US-East/Databases/postgres/field/certificate:/keeper/secrets/certs/cert.pem"
 ```
 
 **Benefits:**
@@ -593,19 +595,19 @@ annotations:
   keeper.security/inject: "true"
   keeper.security/ksm-config: "keeper-auth"
   # Format: RECORD_TITLE:FILENAME:OUTPUT_PATH
-  keeper.security/file-cert: "Database Credentials:cert.pem:/app/certs/server.pem"
-  keeper.security/file-key: "Database Credentials:key.pem:/app/certs/server.key"
+  keeper.security/file-cert: "Database Credentials:cert.pem:/keeper/secrets/certs/server.pem"
+  keeper.security/file-key: "Database Credentials:key.pem:/keeper/secrets/certs/server.key"
 ```
 
 Result:
-- `/app/certs/server.pem` contains the `cert.pem` file from "Database Credentials" record
-- `/app/certs/server.key` contains the `key.pem` file from "Database Credentials" record
+- `/keeper/secrets/certs/server.pem` contains the `cert.pem` file from "Database Credentials" record
+- `/keeper/secrets/certs/server.key` contains the `key.pem` file from "Database Credentials" record
 
 Keeper notation is also accepted for `file-<name>` attachments as an alternative to the
 `RECORD:FILENAME:PATH` form:
 
 ```yaml
-keeper.security/file-cert: "keeper://Database Credentials/file/cert.pem:/app/certs/server.pem"
+keeper.security/file-cert: "keeper://Database Credentials/file/cert.pem:/keeper/secrets/certs/server.pem"
 ```
 
 ### Folder Support
@@ -619,10 +621,10 @@ annotations:
   keeper.security/inject: "true"
   keeper.security/ksm-config: "keeper-auth"
   keeper.security/folder-uid: "FOLDER_UID_HERE"
-  keeper.security/folder-path: "/app/folder-secrets"  # Output directory
+  keeper.security/folder-path: "/keeper/secrets/folder"  # Output directory
 ```
 
-Result: All secrets in the folder are written as JSON files to `/app/folder-secrets/`
+Result: All secrets in the folder are written as JSON files to `/keeper/secrets/folder/`
 
 #### By Folder Path
 
@@ -633,10 +635,10 @@ annotations:
   keeper.security/inject: "true"
   keeper.security/ksm-config: "keeper-auth"
   keeper.security/folder: "Production/Databases"  # Folder path
-  keeper.security/folder-path: "/app/db-secrets"  # Output directory
+  keeper.security/folder-path: "/keeper/secrets/databases"  # Output directory
 ```
 
-Result: All secrets in the `Production/Databases` folder are written to `/app/db-secrets/`
+Result: All secrets in the `Production/Databases` folder are written to `/keeper/secrets/databases/`
 
 Folder paths are case-sensitive and must match the exact folder names in your Keeper vault.
 
@@ -657,10 +659,10 @@ metadata:
     keeper.security/secret: "Application Config"
 
     # Keeper notation (specific field)
-    keeper.security/secret-password: "keeper://ABC123def456/field/password:/app/secrets/db-pass"
+    keeper.security/secret-password: "keeper://ABC123def456/field/password:/keeper/secrets/db-pass"
 
     # File attachment
-    keeper.security/file-cert: "TLS Certificates:server.pem:/app/certs/server.pem"
+    keeper.security/file-cert: "TLS Certificates:server.pem:/keeper/secrets/certs/server.pem"
 
     # Behavior
     keeper.security/refresh-interval: "10m"

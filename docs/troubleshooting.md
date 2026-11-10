@@ -111,6 +111,17 @@ annotations:
   keeper.security/fail-on-error: "false"
 ```
 
+### Pod rejected: "output path ... must be under /keeper/secrets"
+
+**Error** (from `kubectl apply`): `admission webhook "pods.keeper.security" denied the request: invalid injection configuration: secret "my-record": output path "/app/secrets/db.json" must be under /keeper/secrets`
+
+**Cause**: secrets can only be written to the shared in-memory volume mounted at `/keeper/secrets`.
+The init container cannot write anywhere else, and your containers would not see it.
+
+**Solution**: change the path to one under `/keeper/secrets`, for example
+`keeper.security/secret-db: "my-record:/keeper/secrets/db.json"`. Subdirectories such as
+`/keeper/secrets/certs/server.pem` are fine.
+
 ### Secret not found
 
 **Error**: `no record found with title: my-secret`

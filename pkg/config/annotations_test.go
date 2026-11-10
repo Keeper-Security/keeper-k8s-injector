@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -134,8 +135,8 @@ func TestParseAnnotations_Level3_CustomPaths(t *testing.T) {
 			Annotations: map[string]string{
 				"keeper.security/inject":          "true",
 				"keeper.security/ksm-config":     "keeper-auth",
-				"keeper.security/secret-database": "/app/config/db.json",
-				"keeper.security/secret-api":      "/etc/myapp/api.json",
+				"keeper.security/secret-database": "/keeper/secrets/config/db.json",
+				"keeper.security/secret-api":      "/keeper/secrets/myapp/api.json",
 			},
 		},
 	}
@@ -162,14 +163,14 @@ func TestParseAnnotations_Level3_CustomPaths(t *testing.T) {
 
 	if dbSecret == nil {
 		t.Error("database secret not found")
-	} else if dbSecret.Path != "/app/config/db.json" {
-		t.Errorf("database path = %v, want /app/config/db.json", dbSecret.Path)
+	} else if dbSecret.Path != "/keeper/secrets/config/db.json" {
+		t.Errorf("database path = %v, want /keeper/secrets/config/db.json", dbSecret.Path)
 	}
 
 	if apiSecret == nil {
 		t.Error("api secret not found")
-	} else if apiSecret.Path != "/etc/myapp/api.json" {
-		t.Errorf("api path = %v, want /etc/myapp/api.json", apiSecret.Path)
+	} else if apiSecret.Path != "/keeper/secrets/myapp/api.json" {
+		t.Errorf("api path = %v, want /keeper/secrets/myapp/api.json", apiSecret.Path)
 	}
 }
 
@@ -272,7 +273,7 @@ func TestParseAnnotations_KeeperNotation(t *testing.T) {
 			Annotations: map[string]string{
 				"keeper.security/inject":         "true",
 				"keeper.security/ksm-config":    "keeper-auth",
-				"keeper.security/secret-db-pass": "keeper://ABC123def456GHI789jkl/field/password:/app/secrets/db-pass",
+				"keeper.security/secret-db-pass": "keeper://ABC123def456GHI789jkl/field/password:/keeper/secrets/secrets/db-pass",
 			},
 		},
 	}
@@ -290,8 +291,8 @@ func TestParseAnnotations_KeeperNotation(t *testing.T) {
 	if secret.Notation != "keeper://ABC123def456GHI789jkl/field/password" {
 		t.Errorf("Notation = %v, want keeper://ABC123def456GHI789jkl/field/password", secret.Notation)
 	}
-	if secret.Path != "/app/secrets/db-pass" {
-		t.Errorf("Path = %v, want /app/secrets/db-pass", secret.Path)
+	if secret.Path != "/keeper/secrets/secrets/db-pass" {
+		t.Errorf("Path = %v, want /keeper/secrets/secrets/db-pass", secret.Path)
 	}
 }
 
@@ -301,7 +302,7 @@ func TestParseAnnotations_FileAttachment(t *testing.T) {
 			Annotations: map[string]string{
 				"keeper.security/inject":      "true",
 				"keeper.security/ksm-config": "keeper-auth",
-				"keeper.security/file-cert":   "Database Credentials:cert.pem:/app/certs/cert.pem",
+				"keeper.security/file-cert":   "Database Credentials:cert.pem:/keeper/secrets/certs/cert.pem",
 			},
 		},
 	}
@@ -325,8 +326,8 @@ func TestParseAnnotations_FileAttachment(t *testing.T) {
 	if secret.FileName != "cert.pem" {
 		t.Errorf("FileName = %v, want cert.pem", secret.FileName)
 	}
-	if secret.Path != "/app/certs/cert.pem" {
-		t.Errorf("Path = %v, want /app/certs/cert.pem", secret.Path)
+	if secret.Path != "/keeper/secrets/certs/cert.pem" {
+		t.Errorf("Path = %v, want /keeper/secrets/certs/cert.pem", secret.Path)
 	}
 }
 
@@ -337,7 +338,7 @@ func TestParseAnnotations_FolderSupport(t *testing.T) {
 				"keeper.security/inject":      "true",
 				"keeper.security/ksm-config": "keeper-auth",
 				"keeper.security/folder":      "Production/Databases",
-				"keeper.security/folder-path": "/app/db-secrets",
+				"keeper.security/folder-path": "/keeper/secrets/db-secrets",
 			},
 		},
 	}
@@ -355,8 +356,8 @@ func TestParseAnnotations_FolderSupport(t *testing.T) {
 	if folder.FolderPath != "Production/Databases" {
 		t.Errorf("FolderPath = %v, want Production/Databases", folder.FolderPath)
 	}
-	if folder.OutputPath != "/app/db-secrets" {
-		t.Errorf("OutputPath = %v, want /app/db-secrets", folder.OutputPath)
+	if folder.OutputPath != "/keeper/secrets/db-secrets" {
+		t.Errorf("OutputPath = %v, want /keeper/secrets/db-secrets", folder.OutputPath)
 	}
 }
 
@@ -364,17 +365,17 @@ func TestParseAnnotations_FullYAMLConfig(t *testing.T) {
 	configYAML := `
 secrets:
   - record: "Database Credentials"
-    path: /app/config/db.json
+    path: /keeper/secrets/config/db.json
     format: json
   - notation: "keeper://ABC123/field/password"
-    path: /app/secrets/password
+    path: /keeper/secrets/secrets/password
     format: raw
   - record: "Certificate Store"
     file: cert.pem
-    path: /app/certs/cert.pem
+    path: /keeper/secrets/certs/cert.pem
 folders:
   - uid: "FOLDER123"
-    outputPath: /app/folder-secrets
+    outputPath: /keeper/secrets/folder-secrets
 `
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -399,8 +400,8 @@ folders:
 	if cfg.Secrets[0].Name != "Database Credentials" {
 		t.Errorf("Secrets[0].Name = %v, want 'Database Credentials'", cfg.Secrets[0].Name)
 	}
-	if cfg.Secrets[0].Path != "/app/config/db.json" {
-		t.Errorf("Secrets[0].Path = %v, want /app/config/db.json", cfg.Secrets[0].Path)
+	if cfg.Secrets[0].Path != "/keeper/secrets/config/db.json" {
+		t.Errorf("Secrets[0].Path = %v, want /keeper/secrets/config/db.json", cfg.Secrets[0].Path)
 	}
 
 	// Check second secret (notation)
@@ -725,5 +726,42 @@ folders:
 	}
 	if folder.K8sSecretNamePrefix != "api-" {
 		t.Errorf("K8sSecretNamePrefix = %v, want api-", folder.K8sSecretNamePrefix)
+	}
+}
+
+func TestParseAnnotations_RejectsOutputPathOutsideSecretsDir(t *testing.T) {
+	cases := map[string]map[string]string{
+		"custom path":     {"keeper.security/secret-db": "my-record:/app/secrets/db.json"},
+		"field":           {"keeper.security/secret-pw": "my-record[password]:/app/secrets/pw"},
+		"file attachment": {"keeper.security/file-cert": "my-record:cert.pem:/etc/certs/cert.pem"},
+		"traversal":       {"keeper.security/secret-db": "my-record:/keeper/secrets/../db.json"},
+		"prefix only":     {"keeper.security/secret-db": "my-record:/keeper/secretsX/db.json"},
+		"folder output":   {"keeper.security/folder": "Prod", "keeper.security/folder-path": "/app/folder"},
+		"yaml config":     {"keeper.security/config": "secrets:\n  - record: my-record\n    path: /app/db.json\n"},
+	}
+	for name, extra := range cases {
+		t.Run(name, func(t *testing.T) {
+			ann := map[string]string{"keeper.security/inject": "true", "keeper.security/ksm-config": "keeper-auth"}
+			for k, v := range extra {
+				ann[k] = v
+			}
+			_, err := ParseAnnotations(&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Annotations: ann}})
+			if err == nil || !strings.Contains(err.Error(), "must be under /keeper/secrets") {
+				t.Fatalf("expected out-of-tree path to be rejected, got err = %v", err)
+			}
+		})
+	}
+}
+
+func TestValidateOutputPath_AcceptsPathsInsideSecretsDir(t *testing.T) {
+	for _, p := range []string{"/keeper/secrets", "/keeper/secrets/db.json", "/keeper/secrets/a/b.json", "/keeper/secrets/certs/"} {
+		if err := ValidateOutputPath(p); err != nil {
+			t.Errorf("ValidateOutputPath(%q) = %v, want nil", p, err)
+		}
+	}
+	for _, p := range []string{"", "db.json", "/app/db.json", "/keeper/secrets/../x", "/keeper"} {
+		if err := ValidateOutputPath(p); err == nil {
+			t.Errorf("ValidateOutputPath(%q) = nil, want error", p)
+		}
 	}
 }

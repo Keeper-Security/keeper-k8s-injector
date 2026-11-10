@@ -72,9 +72,9 @@ The annotations in `deployment.yaml` control where each secret is written:
 
 ```yaml
 annotations:
-  keeper.security/secret-stripe: "stripe-api-key:/app/secrets/stripe.json"
-  keeper.security/secret-slack: "slack-webhook:/app/secrets/slack.json"
-  keeper.security/secret-aws: "aws-credentials:/app/secrets/aws.json"
+  keeper.security/secret-stripe: "stripe-api-key:/keeper/secrets/stripe.json"
+  keeper.security/secret-slack: "slack-webhook:/keeper/secrets/slack.json"
+  keeper.security/secret-aws: "aws-credentials:/keeper/secrets/aws.json"
 ```
 
 Format: `keeper.security/secret-{name}: "{keeper-record-title}:{file-path}"`
@@ -103,11 +103,11 @@ Your application can parse these files to extract the needed credentials.
 const fs = require('fs');
 
 // Read Stripe API key
-const stripeSecret = JSON.parse(fs.readFileSync('/app/secrets/stripe.json'));
+const stripeSecret = JSON.parse(fs.readFileSync('/keeper/secrets/stripe.json'));
 const stripe = require('stripe')(stripeSecret.password);
 
 // Read Slack webhook
-const slackSecret = JSON.parse(fs.readFileSync('/app/secrets/slack.json'));
+const slackSecret = JSON.parse(fs.readFileSync('/keeper/secrets/slack.json'));
 const webhookUrl = slackSecret.password;
 ```
 
@@ -117,7 +117,7 @@ const webhookUrl = slackSecret.password;
 import json
 
 # Read AWS credentials
-with open('/app/secrets/aws.json') as f:
+with open('/keeper/secrets/aws.json') as f:
     aws_creds = json.load(f)
 
 import boto3
@@ -174,7 +174,7 @@ kubectl delete -f deployment.yaml
 
 Check the file is valid JSON:
 ```bash
-kubectl exec deployment/api-keys-demo -- cat /app/secrets/stripe.json | jq .
+kubectl exec deployment/api-keys-demo -- cat /keeper/secrets/stripe.json | jq .
 ```
 
 ## Next Steps
