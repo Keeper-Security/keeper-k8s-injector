@@ -12,7 +12,7 @@ This is the Keeper Kubernetes Secrets Injector - a mutating admission webhook th
 
 ## Tech Stack
 
-- Go 1.23+
+- Go 1.27+
 - Kubernetes 1.25+
 - controller-runtime for webhook framework
 - Keeper Secrets Manager Go SDK
@@ -29,17 +29,17 @@ This is the Keeper Kubernetes Secrets Injector - a mutating admission webhook th
 
 1. **Build test:**
    ```bash
-   docker run --rm -v $(pwd):/app -w /app golang:1.25.6 go build -buildvcs=false ./cmd/webhook ./cmd/sidecar
+   docker run --rm -v $(pwd):/app -w /app golang:1.27.4 go build -buildvcs=false ./cmd/webhook ./cmd/sidecar
    ```
 
 2. **Run all tests:**
    ```bash
-   docker run --rm -v $(pwd):/app -w /app golang:1.25.6 go test ./...
+   docker run --rm -v $(pwd):/app -w /app golang:1.27.4 go test ./...
    ```
 
 3. **Run linter:**
    ```bash
-   docker run --rm -v $(pwd):/app -w /app golangci/golangci-lint:v2.13.1 golangci-lint run --timeout=5m
+   docker run --rm -v $(pwd):/app -w /app golangci/golangci-lint:v2.15.0 golangci-lint run --timeout=5m
    ```
 
 4. **Only after all pass:** git push

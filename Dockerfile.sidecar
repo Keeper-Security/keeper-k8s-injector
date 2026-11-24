@@ -1,7 +1,7 @@
 # Build stage — run the builder natively on the build platform and cross-compile to the
 # target platform, so multi-arch builds don't emulate the target under QEMU (fast) and each
 # image gets its correct native binary.
-FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27.4-alpine AS builder
 
 RUN apk add --no-cache git ca-certificates
 
