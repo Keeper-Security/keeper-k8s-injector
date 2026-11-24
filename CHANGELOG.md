@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.2] - 2026-11-24
+
+### Security
+
+- Build with Go 1.27.4. Go 1.25 no longer receives security fixes, and the 0.12.1 images carried unpatched standard-library CVEs
+- Update `golang.org/x/net` to 0.62.0
+- Update `go.opentelemetry.io/otel/sdk` and `go.opentelemetry.io/otel/trace` to 1.47.0 (GHSA-q7gw-24fr-5p69)
+
+### Changed
+
+- Update the Keeper Secrets Manager Go SDK to 1.7.0
+- The dev container (`make build` / `make test` / `make lint`) uses Go 1.27.4 and golangci-lint v2.15.0
+
 ## [0.12.1] - 2026-11-10
 
 ### Fixed
